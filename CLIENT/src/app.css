@@ -1,3 +1,26 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Override some Tailwind styles to maintain early web aesthetics */
+@layer base {
+    body {
+        font-family: Courier, monospace;
+    }
+    
+    a:link {
+        color: blue;
+    }
+    
+    a:visited {
+        color: purple;
+    }
+    
+    a:active {
+        color: red;
+    }
+}
