@@ -11,6 +11,6 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int
 
     class Config:
-        env_file = "/home/mimi/.env"
+        env_file = "/Users/moritzvonbismarck/Desktop/Bones Social/Learning/FASTAPI/.env"
 
 settings = Settings()

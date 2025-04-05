@@ -8,9 +8,12 @@ router = APIRouter(
     tags=["users"]
 )
 
-@router.post("/pleaseletmeiniamsocool", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+@router.post("/{invitation}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     #hash the password from user.password
+    invitation = db.query(models.Invitation).filter(models.Invitation.token == invitation).first()
+    if not invitation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invitation not found")
     hashed_password = utils.hash(user.password)
     user.password = hashed_password
     new_user = models.User(**user.model_dump())
