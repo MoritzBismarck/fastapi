@@ -37,19 +37,13 @@
         <header class="mb-8 border-b border-gray-400 pb-4">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold">Bone Social Web Project</h1>
-                <div class="flex items-center">
+                <div class="flex items-center space-x-4">
                     {#if $page.url.pathname !== '/dashboard'}
-                        <a 
-                            href="/dashboard"
-                            class="border border-gray-500 bg-gray-200 px-4 py-1 hover:bg-gray-300 mr-3"
-                        >
+                        <a href="/dashboard" class="text-blue-700 underline hover:text-blue-900">
                             Home
                         </a>
                     {/if}
-                    <a 
-                        href="/profile"
-                        class="border border-gray-500 bg-gray-200 px-4 py-1 hover:bg-gray-300"
-                    >
+                    <a href="/profile" class="text-blue-700 underline hover:text-blue-900">
                         {username}
                     </a>
                 </div>

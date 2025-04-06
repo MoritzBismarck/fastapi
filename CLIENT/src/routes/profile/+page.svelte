@@ -1,10 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+    import { logout } from '$lib/auth';
     
     // Using $state for reactive variables with Svelte 5 runes
     let username = $state('');
     let email = $state('');
+    let isLoggingOut = $state(false);
     
     onMount(() => {
         // Check if user is authenticated
@@ -21,10 +23,20 @@
         email = username; // In this example, username is the email
     });
     
-    function handleLogout() {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('username');
-        goto('/');
+    async function handleLogout() {
+        isLoggingOut = true;
+        const success = await logout();
+        isLoggingOut = false;
+        
+        if (success) {
+            goto('/');
+        } else {
+            // Handle logout failure - could show an error message
+            // For now, we'll still clear local storage as a fallback
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            goto('/');
+        }
     }
 </script>
 
@@ -42,22 +54,16 @@
         </div>
         
         <div class="mb-4">
-            <label class="block text-gray-700 mb-1">Email:</label>
-            <div class="border border-gray-300 p-2 bg-gray-50">{email}</div>
-        </div>
-        
-        <div class="mb-4">
             <label class="block text-gray-700 mb-1">Account Created:</label>
             <div class="border border-gray-300 p-2 bg-gray-50">April 2025</div>
         </div>
         
         <div class="mt-6">
-            <button 
-                class="border border-red-500 bg-red-100 text-red-700 px-4 py-1 hover:bg-red-200"
-                on:click={handleLogout}
-            >
-                Logout
-            </button>
+            <a href="#" 
+               class="text-blue-700 underline hover:text-blue-900"
+               on:click|preventDefault={handleLogout}>
+               Logout
+            </a>
         </div>
     </div>
     
