@@ -5,6 +5,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 from .config import settings
+import redis
 # from urllib.parse import quote_plus
 
 # encoded_password = quote_plus(settings.database_password)
@@ -30,6 +31,24 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Create a Redis client - in production, these would come from settings
+redis_client = redis.Redis(
+    host=getattr(settings, 'REDIS_HOST', 'localhost'),
+    port=getattr(settings, 'REDIS_PORT', 6379),
+    db=getattr(settings, 'REDIS_DB', 0),
+    decode_responses=True  # This makes Redis return strings instead of bytes
+)
+
+# Test function to check Redis connection
+def ping_redis():
+    try:
+        return redis_client.ping()
+    except redis.ConnectionError:
+        return False
+
+
 
 # while True:
 #     try:

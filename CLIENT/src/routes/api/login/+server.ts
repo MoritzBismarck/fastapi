@@ -1,3 +1,4 @@
+// CLIENT/src/routes/api/login/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -21,7 +22,11 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         
         if (response.ok) {
             const data = await response.json();
-            return json(data);
+            // Add username to the response for client-side storage
+            return json({
+                ...data,
+                username: body.email  // Store the email as username
+            });
         } else {
             const errorData = await response.json().catch(() => 
                 ({ detail: 'Authentication failed' })

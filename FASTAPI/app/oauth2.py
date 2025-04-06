@@ -5,6 +5,7 @@ from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .config import settings
+from .services.token_service import TokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 #SECRET_KEY
@@ -25,6 +26,10 @@ def create_access_token(data: dict):
 
 def verify_access_token(token: str, credentials_exception):
     try:
+        # First check if token is blacklisted
+        if TokenService.is_blacklisted(token):
+            raise credentials_exception
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) #decodes the token with the secret key and the algorithm
         id: str = payload.get("user_id")
 

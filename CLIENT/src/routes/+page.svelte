@@ -1,8 +1,11 @@
 <script lang="ts">
-    let username = '';
-    let password = '';
-    let isLoading = false;
-    let errorMessage = '';
+    import { goto } from '$app/navigation';
+    
+    // Using $state for reactive variables with Svelte 5 runes
+    let username = $state('');
+    let password = $state('');
+    let isLoading = $state(false);
+    let errorMessage = $state('');
     
     async function handleLogin() {
         isLoading = true;
@@ -24,8 +27,13 @@
             
             if (response.ok) {
                 console.log('Login successful');
-                // Redirect to a protected page on successful login
-                window.location.href = '/dashboard';
+                
+                // Store the token and username in localStorage
+                localStorage.setItem('authToken', data.access_token);
+                localStorage.setItem('username', data.username || username);
+                
+                // Redirect to the dashboard page
+                goto('/dashboard');
             } else {
                 errorMessage = data.detail || 'Login failed. Please try again.';
             }
@@ -38,20 +46,17 @@
     }
 </script>
 
-<div class="font-mono max-w-3xl mx-auto p-4" style="font-family: Courier, monospace;">
-    <h1 class="text-2xl font-bold mb-4">Welcome to Our Site</h1>
+<svelte:head>
+    <title>Login | Bone Social Web Project</title>
+</svelte:head>
+
+<div class="py-4">
+    <h1 class="text-2xl font-bold mb-4">Welcome to Bone Social Web Project</h1>
     
-    <p class="mb-4">This is a simple information page about this website.</p>
+    <p class="mb-4">This is a simple social web platform for demonstration purposes.</p>
     
-    <p class="mb-6">The purpose of this website is to demonstrate the early web aesthetic, 
-    similar to the first websites created at CERN in the early 1990s.</p>
-    
-    <h2 class="text-xl font-bold mb-2">About This Site</h2>
-    
-    <p class="mb-4">This site was built using modern technology (SvelteKit with TypeScript and Tailwind) 
-    with an intentional aesthetic that recalls the early World Wide Web Project pages from CERN.</p>
-    
-    <p class="mb-6">The design is intentionally minimal and functional, focusing on content rather than presentation.</p>
+    <p class="mb-6">The purpose of this website is to demonstrate a minimal and functional design 
+    with modern technology under the hood.</p>
     
     <hr class="border-gray-400 my-6">
     
@@ -96,16 +101,6 @@
     </form>
     
     <p class="mb-6">Don't have an account? <a href="/signup" class="text-blue-700 underline hover:text-blue-900">Create one here</a>.</p>
-    
-    <hr class="border-gray-400 my-6">
-    
-    <h2 class="text-xl font-bold mb-2">Navigation</h2>
-    
-    <ul class="list-disc pl-6 mb-6">
-        <li class="mb-1"><a href="/" class="text-blue-700 underline hover:text-blue-900">Home</a></li>
-        <li class="mb-1"><a href="/about" class="text-blue-700 underline hover:text-blue-900">About</a></li>
-        <li class="mb-1"><a href="/contact" class="text-blue-700 underline hover:text-blue-900">Contact</a></li>
-    </ul>
     
     <hr class="border-gray-400 my-6">
     
