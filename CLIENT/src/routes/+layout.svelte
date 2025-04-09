@@ -43,6 +43,9 @@
                             Home
                         </a>
                     {/if}
+                    <a href="/friends" class="text-blue-700 underline hover:text-blue-900">
+                        Friends
+                    </a>
                     <a href="/profile" class="text-blue-700 underline hover:text-blue-900">
                         {username}
                     </a>
