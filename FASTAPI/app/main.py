@@ -1,7 +1,7 @@
 from fastapi import Body, FastAPI
 from . import models
 from .database import engine
-from .routers import post, user, auth
+from .routers import post, user, auth, friendship
 from pydantic_settings import BaseSettings
 from .config import Settings
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,7 @@ app.add_middleware( #function that runs before the request is processed needed t
 app.include_router(post.router)
 app.include_router(user.router)
 app.include_router(auth.router)
+app.include_router(friendship.router)
 
 @app.get("/")
 def root():
