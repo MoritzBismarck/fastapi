@@ -4,6 +4,7 @@ export interface User {
     email: string;
     liked?: boolean;
     hasLikedCurrentUser?: boolean;
+    friendshipId?: number | null;
 }
 
 export interface Friendship {

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
-from typing import Optional, Annotated
+from typing import List, Optional, Annotated
 
 # My pydantic models
 
@@ -79,3 +79,19 @@ class FriendshipWithDetails(BaseModel):
     
     class Config:
         orm_mode = True
+
+class UserOverview(BaseModel):
+    id: int
+    username: str
+    liked: bool
+    friendshipId: Optional[int] = None
+    hasLikedCurrentUser: bool
+
+class FriendshipOverview(BaseModel):
+    id: int
+    friend: dict  # Ideally, replace with a proper User schema
+    status: str
+
+class FriendsOverview(BaseModel):
+    users: List[UserOverview]
+    friends: List[FriendshipOverview]

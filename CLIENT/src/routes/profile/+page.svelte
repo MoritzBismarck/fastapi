@@ -49,7 +49,7 @@
     
     <div class="border border-gray-300 p-6 mb-8">
         <div class="mb-4">
-            <label class="block text-gray-700 mb-1">Username:</label>
+            <label class="block text-gray-700 mb-1">Online Screen Name:</label>
             <div class="border border-gray-300 p-2 bg-gray-50">{username}</div>
         </div>
         

@@ -8,20 +8,15 @@
     let friends = $state<Friendship[]>([]);
     let isLoading = $state(true);
     let errorMessage = $state('');
-    
-    // Fetch users and friendships on mount
+
     onMount(async () => {
-        // Check if user is authenticated
         const token = localStorage.getItem('authToken');
-        
         if (!token) {
-            // Redirect to login page if not authenticated
             goto('/');
             return;
         }
-        
         try {
-            // Load users
+            // Use the updated endpoint
             const response = await fetch('/api/friends', {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -30,6 +25,7 @@
             
             if (response.ok) {
                 const data = await response.json();
+                // The payload now includes processed "users" and "friends"
                 users = data.users;
                 friends = data.friends;
             } else {
@@ -42,72 +38,94 @@
             isLoading = false;
         }
     });
-    
-    // Function to handle liking a user (sending a friend request)
-    async function likeUser(userId: number) {
-        try {
-            const token = localStorage.getItem('authToken');
-            
-            const response = await fetch('/api/friends', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ addressee_id: userId })
-            });
-            
-            if (response.ok) {
-                // Update the UI to show the like was sent
-                users = users.map(user => {
-                    if (user.id === userId) {
-                        return { ...user, liked: true };
+
+    // Toggle function uses the new "liked" and "friendshipId" fields
+    async function toggleLike(user: User) {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        // If the user is already liked, retract the friend request
+        if (user.liked && user.friendshipId) {
+            try {
+                const response = await fetch(`/api/friends/${user.friendshipId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
                     }
-                    return user;
                 });
-            } else {
-                const error = await response.json();
-                errorMessage = error.detail || 'Failed to send friend request';
-            }
-        } catch (error) {
-            console.error('Error liking user:', error);
-            errorMessage = 'An error occurred. Please try again.';
-        }
-    }
-    
-    // Function to handle removing a friendship
-    async function removeFriendship(friendshipId: number) {
-        try {
-            const token = localStorage.getItem('authToken');
-            
-            const response = await fetch(`/api/friends/${friendshipId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+                if (response.ok) {
+                    // Update the UI state: remove "like" and clear friendshipId
+                    users = users.map(u => 
+                        u.id === user.id ? { ...u, liked: false, friendshipId: null } : u
+                    );
+                } else {
+                    const errorData = await response.json();
+                    errorMessage = errorData.detail || 'Failed to retract friend request';
                 }
-            });
-            
-            if (response.ok) {
-                // Remove the friendship from the list
-                friends = friends.filter(f => f.id !== friendshipId);
-            } else {
-                const error = await response.json();
-                errorMessage = error.detail || 'Failed to remove friendship';
+            } catch (error) {
+                console.error('Error retracting friend request:', error);
+                errorMessage = 'An error occurred. Please try again.';
             }
-        } catch (error) {
-            console.error('Error removing friendship:', error);
-            errorMessage = 'An error occurred. Please try again.';
+        } else {
+            // Otherwise, send a friend request
+            try {
+                const response = await fetch('/api/friends', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ addressee_id: user.id })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update the user object with new friendship data from backend
+                    users = users.map(u => 
+                        u.id === user.id ? { ...u, liked: true, friendshipId: data.id } : u
+                    );
+                } else {
+                    const errorData = await response.json();
+                    errorMessage = errorData.detail || 'Failed to send friend request';
+                }
+            } catch (error) {
+                console.error('Error sending friend request:', error);
+                errorMessage = 'An error occurred. Please try again.';
+            }
         }
     }
+    // Function to remove a friendship
+    async function removeFriendship(friendshipId: number) {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+        const response = await fetch(`/api/friends/${friendshipId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            // Update your friends list on the frontend
+            friends = friends.filter(f => f.id !== friendshipId);
+        } else {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || 'Failed to remove friendship';
+        }
+    } catch (error) {
+        console.error('Error removing friendship:', error);
+        errorMessage = 'An error occurred. Please try again.';
+    }
+}
 </script>
+
 
 <svelte:head>
     <title>Friends | Bone Social Web Project</title>
 </svelte:head>
 
 <main>
-    <h1 class="text-2xl font-bold mb-6">Friends</h1>
-    
     {#if errorMessage}
         <div class="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
             {errorMessage}
@@ -119,7 +137,7 @@
     {:else}
         <!-- Users section -->
         <section class="mb-8">
-            <h2 class="text-xl font-bold mb-4 border-b border-gray-300 pb-2">People</h2>
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-300 pb-2">People to friend</h2>
             
             {#if users.length > 0}
                 <ul class="space-y-4">
@@ -129,11 +147,10 @@
                                 <p class="font-bold">{user.username}</p>
                             </div>
                             <button 
-                                class="border border-gray-500 bg-gray-200 px-4 py-1 hover:bg-gray-300 {user.liked ? 'bg-gray-300' : ''}"
-                                on:click={() => likeUser(user.id)}
-                                disabled={user.liked}
+                                class="border border-gray-500 px-4 py-1 hover:bg-gray-300"
+                                on:click={() => toggleLike(user)}
                             >
-                                {user.liked ? 'Liked' : 'Like'}
+                                {user.liked ? 'Mog ni mehr' : 'Like'}
                             </button>
                         </li>
                     {/each}

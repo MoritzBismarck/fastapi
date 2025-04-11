@@ -1,3 +1,4 @@
+// /Users/moritzvonbismarck/Desktop/Bones Social/Learning/CLIENT/src/routes/api/friends/[id]/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
