@@ -34,59 +34,87 @@ def get_users_overview(
 
     processed_users = []
     for user in users:
-        # Check if the current user has sent a friend request (pending)
+        # Check for ANY friendship involving this user and current user
+        friendship = next(
+            (
+                f for f in friendships 
+                if (f.requester_id == current_user.id and f.addressee_id == user.id) or
+                (f.requester_id == user.id and f.addressee_id == current_user.id)
+            ),
+            None
+        )
+        
+        # Find sent friendship (current user to this user)
         sent_friendship = next(
             (
                 f for f in friendships 
                 if f.requester_id == current_user.id and 
-                   f.addressee_id == user.id and 
-                   f.status == "pending"
+                f.addressee_id == user.id
             ),
             None
         )
         
-        # Optionally, check if this other user has sent a friend request (pending) to current_user.
+        # Find received friendship (this user to current user)
         received_friendship = next(
             (
                 f for f in friendships 
                 if f.requester_id == user.id and 
-                   f.addressee_id == current_user.id and 
-                   f.status == "pending"
+                f.addressee_id == current_user.id
             ),
             None
         )
         
+        # Determine relationship state
+        relationship_state = "none"
+        if friendship and friendship.status == "accepted":
+            relationship_state = "friends"
+        elif sent_friendship and sent_friendship.status == "pending":
+            relationship_state = "request_sent"
+        elif received_friendship and received_friendship.status == "pending":
+            relationship_state = "request_received"
+        
+        # Skip users that are already friends if you don't want them showing up in suggestions
+        if relationship_state == "friends":
+            continue
+
         processed_users.append({
             "id": user.id,
             "username": user.username,
-            # Flag to indicate current user has liked (sent friend request to) this user
-            "liked": bool(sent_friendship),
-            # Friendship ID if there is a pending friend request sent by the current user
-            "friendshipId": sent_friendship.id if sent_friendship else None,
-            # Flag to indicate this user has liked current user (optional, for sorting)
-            "hasLikedCurrentUser": bool(received_friendship)
+            "email": user.email,
+            "relationship": relationship_state,
+            "friendshipId": friendship.id if friendship else None,
+            "liked": bool(sent_friendship and sent_friendship.status == "pending"),
+            "hasLikedCurrentUser": bool(received_friendship and received_friendship.status == "pending")
         })
     
-    # Sort users so those who have liked the current user appear first.
-    processed_users.sort(key=lambda u: (not u['hasLikedCurrentUser'], u['username']))
+    # Sort: first those who have sent friend requests, then alphabetically
+    processed_users.sort(key=lambda u: (u["relationship"] != "request_received", u["username"]))
     
-    # Optionally, compile a list of established friendships if you need that separately.
-    established_friendships = [
-        {
-            "id": f.id,
-            "friend": db.query(models.User).filter(
-                models.User.id == (f.addressee_id if f.requester_id == current_user.id else f.requester_id)
-            ).first(),
-            "status": f.status
-        }
-        for f in friendships if f.status == "accepted"
-    ]
+    # Get established friendships
+    established_friendships = []
+    for f in friendships:
+        if f.status == "accepted":
+            # Get the friend (the other user in this friendship)
+            friend_id = f.addressee_id if f.requester_id == current_user.id else f.requester_id
+            friend = db.query(models.User).filter(models.User.id == friend_id).first()
+            
+            # Convert User object to dictionary
+            friend_dict = {
+                "id": friend.id,
+                "username": friend.username or f"User {friend.id}",
+                "email": friend.email
+            }
+            
+            established_friendships.append({
+                "id": f.id,
+                "friend": friend_dict,  # Use the dictionary instead of the User object
+                "status": f.status
+            })
     
     return {
         "users": processed_users,
         "friends": established_friendships
     }
-
 
 @router.post("/{invitation}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):

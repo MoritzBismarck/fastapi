@@ -83,6 +83,8 @@ class FriendshipWithDetails(BaseModel):
 class UserOverview(BaseModel):
     id: int
     username: str
+    email: EmailStr
+    relationship: str  # "none", "friends", "request_sent", "request_received"
     liked: bool
     friendshipId: Optional[int] = None
     hasLikedCurrentUser: bool
@@ -95,3 +97,46 @@ class FriendshipOverview(BaseModel):
 class FriendsOverview(BaseModel):
     users: List[UserOverview]
     friends: List[FriendshipOverview]
+
+
+# Add to FASTAPI/app/schemas.py
+
+class EventBase(BaseModel):
+    title: str
+    description: str
+    event_date: datetime
+    location: Optional[str] = None
+
+class EventCreate(EventBase):
+    pass
+
+class Event(EventBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+class EventLike(BaseModel):
+    id: int
+    user_id: int
+    event_id: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+class NotificationBase(BaseModel):
+    content: str
+
+class NotificationCreate(NotificationBase):
+    user_id: int
+
+class Notification(NotificationBase):
+    id: int
+    user_id: int
+    is_read: bool
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True

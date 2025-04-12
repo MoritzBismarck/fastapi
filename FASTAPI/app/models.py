@@ -44,7 +44,6 @@ class Friendship(Base):
         UniqueConstraint('requester_id', 'addressee_id', name='unique_friendship'),
     )
 
-
 class InvitationToken(Base):
     __tablename__ = "invitation_tokens"
     id = Column(Integer, primary_key=True, nullable=False)
@@ -55,6 +54,46 @@ class InvitationToken(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Made nullable for first admin
     expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     session_token = Column(String, nullable=True)
+
+
+class Event(Base):
+    __tablename__ = "events"
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    event_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    location = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    
+class EventLike(Base):
+    __tablename__ = "event_likes"
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    
+    # Create a unique constraint to prevent duplicate likes
+    __table_args__ = (
+        UniqueConstraint('user_id', 'event_id', name='unique_user_event_like'),
+    )
+    
+    # Define relationships
+    user = relationship("User")
+    event = relationship("Event")
+    
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    content = Column(String, nullable=False)
+    is_read = Column(Boolean, server_default="False", nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    
+    # Define relationship
+    user = relationship("User")
 
 
     
