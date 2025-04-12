@@ -2,6 +2,7 @@
     import '../app.css';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import NotificationBell from '$lib/components/NotificationBell.svelte';
     
     // Using $state for reactive variables with Svelte 5 runes
     let isAuthenticated = $state(false);
@@ -47,6 +48,9 @@
                     <a href="/profile" class="text-blue-700 underline hover:text-blue-900">
                         {username}
                     </a>
+                    <div class="mx-2">
+                        <NotificationBell />
+                    </div>
                 </div>
             </div>
         </header>

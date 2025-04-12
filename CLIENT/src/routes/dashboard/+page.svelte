@@ -4,8 +4,8 @@
     
     // Sample data for services
     const liveServices = [
-        { id: 1, name: 'User Authentication', description: 'Basic login and registration functionality' },
-        { id: 2, name: 'Post Management', description: 'Create, read, update, and delete posts' }
+        { id: 1, name: 'Event Matcher', description: 'Find and join events with your friends', route: '/events'},
+        { id: 2, name: 'Friend Finder', description: 'Find and connect with friends', route: '/friends' } 
     ];
     
     const upcomingServices = [
@@ -39,7 +39,7 @@
                     <li class="border border-gray-300 p-4">
                         <h3 class="font-bold">{service.name}</h3>
                         <p>{service.description}</p>
-                        <a href="#" class="text-blue-700 underline hover:text-blue-900 mt-2 inline-block">
+                        <a href={service.route} class="text-blue-700 underline hover:text-blue-900 mt-2 inline-block">
                             Access Service
                         </a>
                     </li>

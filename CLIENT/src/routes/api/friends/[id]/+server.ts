@@ -47,7 +47,7 @@ export const PUT: RequestHandler = async ({ params, request, fetch }) => {
     } catch (error) {
         console.error('Error connecting to backend:', error);
         return json(
-            { detail: `Failed to connect to friendship service:` }, 
+            { detail: `Failed to connect to friendship service:` },      // Fix later what error exactly is
             { status: 500 }
         );
     }
