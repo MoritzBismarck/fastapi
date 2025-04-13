@@ -132,43 +132,80 @@
     <title>Events | Bone Social Web Project</title>
 </svelte:head>
 
-<div class="max-w-lg mx-auto p-4">
-    <h1 class="text-2xl font-bold">Events</h1>
-    <a href="/events/liked" class="text-blue-700 underline hover:text-blue-900">
-        My Liked Events
-    </a>
-    
+<div class="font-mono p-4">
+    <h1 class="text-xl font-bold mb-4">Events</h1>
+    <div class="mb-4">
+        <a href="/events/liked" class="text-blue-700 underline hover:text-blue-900">
+            View My Liked Events
+        </a>
+    </div>
     
     {#if errorMessage}
-        <div class="border border-red-500 p-4 mb-6 text-red-700 bg-red-100 rounded">
+        <div class="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
             {errorMessage}
         </div>
     {/if}
     
     {#if isLoading}
-        <div class="flex justify-center items-center h-64">
-            <p class="text-gray-600">Loading events...</p>
+        <div class="p-4 border border-gray-300 text-center">
+            Loading events...
         </div>
     {:else if noMoreEvents}
-        <div class="border border-gray-300 rounded p-6 text-center">
+        <div class="border border-gray-300 p-4 text-center">
             <p class="mb-4">No more events to show right now.</p>
             <button 
                 on:click={fetchEvents}
-                class="border border-gray-500 px-4 py-2 hover:bg-gray-100"
+                class="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
             >
                 Refresh
             </button>
         </div>
     {:else if getCurrentEvent() !== null}
-        <div class="card-deck-container relative">
-            <EventCard 
-                event={getCurrentEvent()!}
-                onLike={likeEvent}
-                onSkip={skipEvent}
-            />
+        <div class="border border-gray-300 p-4">
+            <div class="mb-4">
+                <h2 class="font-bold">{getCurrentEvent()!.title}</h2>
+                {#if getCurrentEvent()!.location}
+                    <div class="text-gray-600">{getCurrentEvent()!.location}</div>
+                {/if}
+            </div>
+            
+            <div class="mb-4">
+                <div class="font-bold">When:</div>
+                <div>{new Date(getCurrentEvent()!.event_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>
+            </div>
+            
+            <div class="mb-6">
+                <div class="font-bold">Description:</div>
+                <p class="whitespace-pre-line">{getCurrentEvent()!.description}</p>
+            </div>
+            
+            <div class="flex justify-between pt-4 border-t border-gray-200">
+                <button 
+                    on:click={skipEvent}
+                    class="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
+                    aria-label="Skip event"
+                >
+                    Skip
+                </button>
+                
+                <button 
+                    on:click={likeEvent}
+                    class="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
+                    aria-label="Like event"
+                >
+                    Like
+                </button>
+            </div>
         </div>
     {:else}
-        <div class="border border-gray-300 rounded p-6 text-center">
+        <div class="border border-gray-300 p-4 text-center">
             <p>No events found.</p>
         </div>
     {/if}

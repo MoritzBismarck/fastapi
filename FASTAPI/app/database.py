@@ -9,7 +9,6 @@ import redis
 # from urllib.parse import quote_plus
 
 # encoded_password = quote_plus(settings.database_password)
-
 # print("DEBUG: Environment Variables:")
 # print(f"DATABASE_HOSTNAME: '{settings.database_hostname}'")
 # print(f"DATABASE_PORT: '{settings.database_port}'")

@@ -1,12 +1,14 @@
 # Create a new file: FASTAPI/app/routers/event.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .. import models, schemas, oauth2
 from ..database import get_db
 from ..services.notification_service import NotificationService
 from sqlalchemy import and_, func
+import uuid
+from ..services import storage_service
 
 router = APIRouter(
     prefix="/events",
@@ -24,6 +26,36 @@ def create_event(
     db.commit()
     db.refresh(new_event)
     return new_event
+
+# app/main.py
+
+@router.post("/upload/")
+async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: models.User = Depends(oauth2.get_current_user)):
+    """
+    Endpoint for uploading a file.
+    
+    - Generates a unique filename using UUID.
+    - Uses the storage service to upload the file directly to DigitalOcean Spaces.
+    - Returns the public URL of the uploaded file.
+    """
+    # Generate a unique filename to avoid conflicts.
+    # Keep the original file extension.
+    original_filename = file.filename
+    file_extension = original_filename.split(".")[-1] if "." in original_filename else "dat"
+    object_name = f"{uuid.uuid4()}.{file_extension}"
+
+    try:
+        # Reset the file pointer to the beginning, if needed.
+        file.file.seek(0)
+        # Upload the file using the storage service
+        storage_service.upload_fileobj(file.file, object_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+
+    # Generate the accessible file URL after upload.
+    file_url = storage_service.generate_file_url(object_name)
+    return {"file_url": file_url}
+
 
 @router.get("/", response_model=List[schemas.Event])
 def get_events(

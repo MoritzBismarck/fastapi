@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    SPACES_REGION: str
+    SPACES_BUCKET: str
+    SPACES_ENDPOINT: str
+    SPACES_KEY: str
+    SPACES_SECRET: str
 
     class Config:
         env_file = "/Users/moritzvonbismarck/Desktop/Bones Social/Learning/FASTAPI/.env"

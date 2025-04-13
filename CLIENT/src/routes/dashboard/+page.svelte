@@ -39,6 +39,7 @@
                     <li class="border border-gray-300 p-4">
                         <h3 class="font-bold">{service.name}</h3>
                         <p>{service.description}</p>
+                        |
                         <a href={service.route} class="text-blue-700 underline hover:text-blue-900 mt-2 inline-block">
                             Access Service
                         </a>
