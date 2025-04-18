@@ -60,9 +60,9 @@ def delete_file(object_name: str) -> None:
 
 def generate_file_url(object_name: str) -> str:
     """
-    Generates a public URL for an object stored in DigitalOcean Spaces.
+    Generates a CDN URL for an object stored in DigitalOcean Spaces.
 
     :param object_name: Name of the file in the bucket.
-    :return: Public URL for the file.
+    :return: CDN URL for the file.
     """
-    return f"{SPACES_ENDPOINT}/{object_name}"
+    return f"https://{SPACES_BUCKET}.{SPACES_REGION}.cdn.digitaloceanspaces.com/{SPACES_BUCKET}/{object_name}"
