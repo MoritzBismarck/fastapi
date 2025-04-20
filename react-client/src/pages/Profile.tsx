@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
 import { get, put } from '../api/client';
 import { User } from '../types';
+import { uploadProfilePicture } from '../api/profileApi';
 
 const Profile: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -79,30 +80,14 @@ const Profile: React.FC = () => {
     try {
       setUploading(true);
       
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      
-      // Upload file
-      const response = await fetch('/api/users/me/picture', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: formData
-      });
-      
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setProfileData(updatedUser);
-        setSelectedFile(null);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Failed to upload picture');
-      }
-    } catch (error) {
+      // Use your existing API function instead of fetch
+      const updatedUser = await uploadProfilePicture(selectedFile);
+      setProfileData(updatedUser);
+      setSelectedFile(null);
+    } catch (error: any) {
       console.error('Error uploading profile picture:', error);
-      setError('Failed to upload profile picture');
+      // Access error details from axios error structure
+      setError(error.response?.data?.detail || 'Failed to upload profile picture');
     } finally {
       setUploading(false);
     }

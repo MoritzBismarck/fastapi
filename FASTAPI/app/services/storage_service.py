@@ -18,6 +18,20 @@ s3_client = boto3.client(
     config=Config(signature_version="s3v4")  # Use S3v4 for signing requests
 )
 
+# cors_configuration = {
+#     "CORSRules": [
+#         {
+#             "AllowedOrigins": ["*"],
+#             "AllowedMethods": ["GET", "PUT", "POST"],
+#             "AllowedHeaders": ["*"],
+#             "ExposeHeaders": ["ETag"],
+#             "MaxAgeSeconds": 3000
+#         }
+#     ]
+# }
+
+# s3_client.put_bucket_cors(Bucket=settings.SPACES_BUCKET, CORSConfiguration=cors_configuration)
+
 def upload_file(file_path: str, object_name: str) -> str:
     """
     Uploads a file to the specified DigitalOcean Spaces bucket.
@@ -27,7 +41,7 @@ def upload_file(file_path: str, object_name: str) -> str:
     :return: Public URL to the uploaded file.
     """
     try:
-        s3_client.upload_file(file_path, SPACES_BUCKET, object_name)
+        s3_client.upload_file(file_path, SPACES_BUCKET, object_name, ExtraArgs={"ACL": "public-read"})
         # Construct the public URL (if your bucket is set to public or using a CDN)
         file_url = f"https://{SPACES_BUCKET}.{SPACES_ENDPOINT}/{object_name}"
         return file_url
@@ -54,7 +68,7 @@ def delete_file(object_name: str) -> None:
     :param object_name: Name of the file in the bucket to delete.
     """
     try:
-        s3_client.delete_object(Bucket=SPACES_BUCKET, Key=object_name)
+        s3_client.delete_object(Bucket=SPACES_BUCKET, Key=object_name, ExtraArgs={"ACL": "public-read"})
     except Exception as e:
         raise RuntimeError(f"File deletion failed: {e}")
 
