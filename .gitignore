@@ -13,3 +13,4 @@ CLIENT/dist/
 
 # Environment variables
 FASTAPI/.env
+react-client/.env
