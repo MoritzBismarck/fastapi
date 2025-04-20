@@ -5,7 +5,7 @@ import { getCurrentUser } from '../api/userApi';
 import { 
   storeToken, 
   storeUsername, 
-  getStoredToken, 
+  // getStoredToken, 
   getStoredUsername, 
   removeStoredToken, 
   removeStoredUsername,
@@ -14,6 +14,7 @@ import {
 
 interface AuthContextType {
   user: User | null;
+  username: string;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -24,6 +25,7 @@ interface AuthContextType {
 // Create context with default values
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  username: '',
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -125,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const contextValue: AuthContextType = {
     user,
+    username: user?.username || getStoredUsername() || '',
     isAuthenticated,
     isLoading,
     error,
