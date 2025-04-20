@@ -57,7 +57,7 @@ def upload_fileobj(file_obj, object_name: str) -> None:
     :param object_name: The target file name in the Spaces bucket.
     """
     try:
-        s3_client.upload_fileobj(file_obj, SPACES_BUCKET, object_name)
+        s3_client.upload_fileobj(file_obj, SPACES_BUCKET, object_name, ExtraArgs={"ACL": "public-read"})
     except Exception as e:
         raise RuntimeError(f"File upload failed: {e}")
 
@@ -68,7 +68,7 @@ def delete_file(object_name: str) -> None:
     :param object_name: Name of the file in the bucket to delete.
     """
     try:
-        s3_client.delete_object(Bucket=SPACES_BUCKET, Key=object_name, ExtraArgs={"ACL": "public-read"})
+        s3_client.delete_object(Bucket=SPACES_BUCKET, Key=object_name,)
     except Exception as e:
         raise RuntimeError(f"File deletion failed: {e}")
 
