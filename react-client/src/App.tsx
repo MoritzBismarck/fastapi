@@ -8,8 +8,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
-// import Events from './pages/Events';
-// import LikedEvents from './pages/LikedEvents';
+import Events from './pages/Events';
+import LikedEvents from './pages/LikedEvents';
 
 const App: React.FC = () => {
   return (
@@ -37,6 +37,22 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Friends />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+              path="/events" 
+              element={
+                <ProtectedRoute>
+                  <Events />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+              path="/events/liked" 
+              element={
+                <ProtectedRoute>
+                  <LikedEvents />
                 </ProtectedRoute>
               }
             />
