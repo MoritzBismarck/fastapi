@@ -1,8 +1,10 @@
+import uuid
 from sqlalchemy import or_
 from .. import models, schemas, utils, oauth2
-from fastapi import Body, FastAPI, Response, status, HTTPException, Depends, APIRouter
+from fastapi import Body, FastAPI, Response, status, HTTPException, Depends, APIRouter, UploadFile, File
 from ..database import engine, get_db
 from sqlalchemy.orm import Session
+from ..services import storage_service  # Import the storage_service module
 
 router = APIRouter(
     prefix="/users",
@@ -12,6 +14,68 @@ router = APIRouter(
 @router.get("/me", response_model=schemas.UserOut)
 def get_current_user_data(db: Session = Depends(get_db), current_user: models.User = Depends(oauth2.get_current_user)):
     return current_user
+
+@router.put("/me", response_model=schemas.UserOut)
+def update_user_profile(
+    user_update: schemas.UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Update the current user's profile information"""
+    
+    user_query = db.query(models.User).filter(models.User.id == current_user.id)
+    
+    # If updating username, check if it's already taken
+    if user_update.username and user_update.username != current_user.username:
+        existing_user = db.query(models.User).filter(models.User.username == user_update.username).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+    
+    # Update the user with the provided values, ignoring None values
+    update_data = user_update.model_dump(exclude_unset=True)
+    user_query.update(update_data, synchronize_session=False)
+    
+    db.commit()
+    
+    # Return the updated user
+    return user_query.first()
+
+@router.post("/me/picture", response_model=schemas.UserOut)
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Upload a profile picture for the current user"""
+    # Generate a unique filename
+    original_filename = file.filename
+    file_extension = original_filename.split(".")[-1] if "." in original_filename else "jpg"
+    object_name = f"profile-pictures/{current_user.id}/{uuid.uuid4()}.{file_extension}"
+    
+    try:
+        # Reset the file pointer to the beginning
+        file.file.seek(0)
+        # Upload the file to storage service
+        storage_service.upload_fileobj(file.file, object_name)
+        
+        # Get the public URL
+        file_url = storage_service.generate_file_url(object_name)
+        
+        # Update the user's profile picture URL
+        user_query = db.query(models.User).filter(models.User.id == current_user.id)
+        user_query.update({"profile_picture": file_url}, synchronize_session=False)
+        db.commit()
+        
+        # Return the updated user
+        return user_query.first()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload profile picture: {str(e)}"
+        )
 
 @router.get("/", response_model=list[schemas.UserOut])
 def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):

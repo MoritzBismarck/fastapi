@@ -22,6 +22,9 @@ class User(Base):
     username = Column(String, nullable=True, unique=True)
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
+    first_name = Column(String, nullable=True)  # New field
+    last_name = Column(String, nullable=True)   # New field
+    profile_picture = Column(String, nullable=True)  # New field for storing image URL
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
 
 

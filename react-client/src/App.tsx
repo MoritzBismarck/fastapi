@@ -6,7 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-// import Profile from './pages/Profile';
+import Profile from './pages/Profile';
 // import Friends from './pages/Friends';
 // import Events from './pages/Events';
 // import LikedEvents from './pages/LikedEvents';
@@ -23,6 +23,12 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } 
             />

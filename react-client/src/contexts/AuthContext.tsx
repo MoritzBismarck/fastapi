@@ -87,7 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser({
         id: 0, // This will be updated when we fetch the full profile
         username: getStoredUsername() || credentials.email,
-        email: credentials.email
+        email: credentials.email,
+        created_at: new Date().toISOString() // Add a temporary created_at property
       });
       
       // Fetch the full user profile

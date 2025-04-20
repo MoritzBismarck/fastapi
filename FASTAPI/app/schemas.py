@@ -8,16 +8,26 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int
     username: str
     email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
     created_at: datetime
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    username: Optional[str] = None
 
 class PostBase(BaseModel):
     title: str
