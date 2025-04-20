@@ -80,19 +80,24 @@ const Profile: React.FC = () => {
     try {
       setUploading(true);
       
-      // Use your existing API function instead of fetch
       const updatedUser = await uploadProfilePicture(selectedFile);
       setProfileData(updatedUser);
       setSelectedFile(null);
     } catch (error: any) {
       console.error('Error uploading profile picture:', error);
-      // Access error details from axios error structure
       setError(error.response?.data?.detail || 'Failed to upload profile picture');
     } finally {
       setUploading(false);
     }
   };
   
+  // Format the creation date
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
   if (isLoading && !profileData) {
     return <div className="p-4 text-center">Loading profile...</div>;
   }
@@ -101,140 +106,130 @@ const Profile: React.FC = () => {
     <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
       
-      <div className="my-8">
-        <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-        
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Profile Picture Section */}
-          <div className="md:w-1/3">
-            <div className="border border-gray-300 p-4 rounded">
-              {profileData?.profile_picture ? (
-                <img 
-                  src={profileData.profile_picture} 
-                  alt="Profile" 
-                  className="w-full h-auto rounded mb-4"
-                />
-              ) : (
-                <div className="bg-gray-200 w-full aspect-square flex items-center justify-center rounded mb-4">
-                  <span className="text-gray-500 text-5xl font-bold">
-                    {profileData?.first_name?.[0] || profileData?.username?.[0] || '?'}
-                  </span>
-                </div>
-              )}
-              
-              <div className="mt-4">
-                <input
-                  type="file"
-                  id="profile-picture"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="mb-2"
-                />
-                
-                <button
-                  onClick={handleFileUpload}
-                  disabled={!selectedFile || uploading}
-                  className="border border-gray-500 bg-gray-200 px-4 py-1 w-full hover:bg-gray-300 disabled:opacity-50"
-                >
-                  {uploading ? 'Uploading...' : 'Upload New Picture'}
-                </button>
-              </div>
-            </div>
-          </div>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      {isEditing ? (
+        <div className="mt-8">
+          <h2 className="text-xl mb-4">Edit Profile</h2>
           
-          {/* Profile Info Section */}
-          <div className="md:w-2/3">
-            {isEditing ? (
-              <form onSubmit={handleSubmit} className="border border-gray-300 p-4 rounded">
-                <div className="mb-4">
-                  <label htmlFor="first-name" className="block mb-1 font-bold">First Name:</label>
-                  <input
-                    id="first-name"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="border border-gray-500 p-2 w-full"
-                  />
-                </div>
-                
-                <div className="mb-4">
-                  <label htmlFor="last-name" className="block mb-1 font-bold">Last Name:</label>
-                  <input
-                    id="last-name"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="border border-gray-500 p-2 w-full"
-                  />
-                </div>
-                
-                <div className="mb-4">
-                  <label htmlFor="username" className="block mb-1 font-bold">Username:</label>
-                  <input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="border border-gray-500 p-2 w-full"
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-2 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditing(false);
-                      // Reset form values
-                      setFirstName(profileData?.first_name || '');
-                      setLastName(profileData?.last_name || '');
-                      setUsername(profileData?.username || '');
-                    }}
-                    className="border border-gray-500 bg-gray-200 px-4 py-1 hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="border border-blue-500 bg-blue-100 px-4 py-1 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="border border-gray-300 p-4 rounded">
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold mb-2">
-                    {profileData?.first_name && profileData?.last_name
-                      ? `${profileData.first_name} ${profileData.last_name}`
-                      : profileData?.username || 'No name set'}
-                  </h2>
-                  
-                  <p className="text-gray-600">@{profileData?.username}</p>
-                  <p>{profileData?.email}</p>
-                </div>
-                
-                <div className="mt-6">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="border border-gray-500 bg-gray-200 px-4 py-1 hover:bg-gray-300"
-                  >
-                    Edit Profile
-                  </button>
-                </div>
-              </div>
-            )}
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="profile-picture" className="block mb-2">Profile Picture:</label>
+              <input
+                type="file"
+                id="profile-picture"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="mb-2"
+              />
+              
+              <button
+                type="button"
+                onClick={handleFileUpload}
+                disabled={!selectedFile || uploading}
+                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1 mr-2 inline-block"
+              >
+                {uploading ? 'Uploading...' : 'Upload Picture'}
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="username" className="block mb-2">Username:</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="border border-gray-500 p-1 w-full"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="first-name" className="block mb-2">First Name:</label>
+              <input
+                id="first-name"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="border border-gray-500 p-1 w-full"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="last-name" className="block mb-2">Last Name:</label>
+              <input
+                id="last-name"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="border border-gray-500 p-1 w-full"
+              />
+            </div>
+            
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1 mr-2"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="mt-8 p-8 flex flex-col items-center">
+          {/* Prominent profile picture */}
+          {profileData?.profile_picture ? (
+            <img 
+              src={profileData.profile_picture} 
+              alt="Profile" 
+              className="w-90 h-90 mb-6"
+            />
+          ) : (
+            <div className="w-64 h-64 bg-gray-200 flex items-center justify-center mb-6">
+              <span className="text-black text-8xl font-bold">
+                {profileData?.username?.[0]?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+          
+          {/* Profile info */}
+          <div className="text-center">
+            <p className="text-xl font-bold mb-2">@{profileData?.username || 'username'}</p>
+            
+            <p className="text-xl mb-2">
+              {profileData?.first_name && profileData?.last_name
+                ? `${profileData.first_name} ${profileData.last_name}`
+                : 'No name set'}
+            </p>
+            
+            <p className="mb-2">{profileData?.email}</p>
+            
+            <p className="mb-6">Created at: {formatDate(profileData?.created_at)}</p>
+            
+            {/* Windows 95 style button */}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
+            >
+              Edit Profile
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

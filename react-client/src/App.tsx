@@ -7,7 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-// import Friends from './pages/Friends';
+import Friends from './pages/Friends';
 // import Events from './pages/Events';
 // import LikedEvents from './pages/LikedEvents';
 
@@ -31,6 +31,14 @@ const App: React.FC = () => {
                   <Profile />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/friends" 
+              element={
+                <ProtectedRoute>
+                  <Friends />
+                </ProtectedRoute>
+              }
             />
           </Routes>
         </div>

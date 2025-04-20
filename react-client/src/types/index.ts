@@ -6,6 +6,10 @@ export interface User {
   last_name?: string;
   profile_picture?: string;
   created_at?: string;
+  relationship?: 'none' | 'friends' | 'request_sent' | 'request_received';
+  friendshipId?: number | null;
+  liked?: boolean;
+  hasLikedCurrentUser?: boolean;
 }
   
   export interface Friendship {
