@@ -3,10 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 from .. import models, schemas, oauth2
 from ..database import get_db
 from ..services.notification_service import NotificationService
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 import uuid
 from ..services import storage_service
 
@@ -108,7 +109,9 @@ def get_events(
     current_user: models.User = Depends(oauth2.get_current_user),
     limit: int = 10,
     skip: int = 0,
-    exclude_liked: bool = True
+    exclude_liked: bool = True,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None
 ):
     # Base query for events
     query = db.query(models.Event)
@@ -118,11 +121,24 @@ def get_events(
         liked_event_ids = db.query(models.EventLike.event_id).filter(
             models.EventLike.user_id == current_user.id
         ).scalar_subquery()
-
         query = query.filter(models.Event.id.notin_(liked_event_ids))
     
-    # Get events with pagination
-    events = query.order_by(models.Event.event_date).offset(skip).limit(limit).all()
+    # Filter by date range if provided
+    if from_date:
+        query = query.filter(models.Event.start_date >= from_date)
+    if to_date:
+        query = query.filter(
+            or_(
+                models.Event.end_date <= to_date,
+                and_(
+                    models.Event.end_date.is_(None),
+                    models.Event.start_date <= to_date
+                )
+            )
+        )
+    
+    # Get events with pagination, sorted by start_date
+    events = query.order_by(models.Event.start_date).offset(skip).limit(limit).all()
     
     return events
 
@@ -142,7 +158,7 @@ def get_liked_events(
     ).filter(
         models.EventLike.user_id == current_user.id
     ).order_by(
-        models.Event.event_date
+        models.Event.start_date  # Changed from event_date to start_date
     ).offset(skip).limit(limit).all()
     
     return liked_events

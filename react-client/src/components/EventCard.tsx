@@ -1,3 +1,4 @@
+// react-client/src/components/EventCard.tsx
 import React from 'react';
 import { Event } from '../types';
 
@@ -16,17 +17,58 @@ const EventCard: React.FC<EventCardProps> = ({
   onUnlike,
   showActionButtons = true
 }) => {
-  // Format the date to be more readable
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Format the date display
+  const formatDateRange = () => {
+    const startDate = new Date(event.start_date);
+    const endDate = event.end_date ? new Date(event.end_date) : null;
+    
+    const dateOptions: Intl.DateTimeFormatOptions = { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    };
+    
+    // Format the start date
+    let formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
+    
+    // If there's an end date and it's different from the start date
+    if (endDate && endDate.toDateString() !== startDate.toDateString()) {
+      formattedDate += ` - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+    }
+    
+    return formattedDate;
+  };
+  
+  // Format the time display
+  const formatTimeRange = () => {
+    if (event.all_day) {
+      return "All day";
+    }
+    
+    let timeStr = "";
+    
+    if (event.start_time) {
+      timeStr = event.start_time;
+      
+      if (event.end_time) {
+        timeStr += ` - ${event.end_time}`;
+      }
+    }
+    
+    return timeStr || "Time not specified";
+  };
+  
+  // Format the location display
+  const formatLocation = () => {
+    if (!event.venue_name && !event.address) {
+      return "Location not specified";
+    }
+    
+    if (event.venue_name && event.address) {
+      return `${event.venue_name}, ${event.address}`;
+    }
+    
+    return event.venue_name || event.address;
   };
 
   return (
@@ -44,14 +86,17 @@ const EventCard: React.FC<EventCardProps> = ({
       
       <div className="flex justify-between items-start mb-4">
         <h2 className="text-xl font-bold">{event.title}</h2>
-        {event.location && (
-          <div className="text-sm text-gray-600">{event.location}</div>
-        )}
       </div>
       
       <div className="mb-4">
         <div className="text-sm font-bold mb-1">When:</div>
-        <div>{formatDate(event.event_date)}</div>
+        <div>{formatDateRange()}</div>
+        <div>{formatTimeRange()}</div>
+      </div>
+      
+      <div className="mb-4">
+        <div className="text-sm font-bold mb-1">Where:</div>
+        <div>{formatLocation()}</div>
       </div>
       
       <div className="mb-6">

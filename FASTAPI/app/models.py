@@ -65,8 +65,13 @@ class Event(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    event_date = Column(TIMESTAMP(timezone=True), nullable=False)
-    location = Column(String, nullable=True)
+    start_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    end_date = Column(TIMESTAMP(timezone=True), nullable=True)  # Nullable for single-day events
+    start_time = Column(String, nullable=True)  # Store time as string for flexibility
+    end_time = Column(String, nullable=True)    # Nullable for events with just a start time
+    all_day = Column(Boolean, default=False)    # Flag for all-day events
+    venue_name = Column(String, nullable=True)
+    address = Column(String, nullable=True)
     image_url = Column(String, nullable=True)  # Add this line
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     

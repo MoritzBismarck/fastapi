@@ -114,9 +114,14 @@ class FriendsOverview(BaseModel):
 class EventBase(BaseModel):
     title: str
     description: str
-    event_date: datetime
-    location: Optional[str] = None
-    image_url: Optional[str] = None  # Add this line
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    all_day: bool = False
+    venue_name: Optional[str] = None
+    address: Optional[str] = None
+    image_url: Optional[str] = None
 
 class EventCreate(EventBase):
     pass

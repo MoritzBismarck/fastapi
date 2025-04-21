@@ -1,3 +1,4 @@
+// react-client/src/pages/CreateEvent.tsx
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -9,12 +10,21 @@ import { getStoredToken } from '../utils/tokenStorage';
 interface EventFormData {
   title: string;
   description: string;
-  event_date: string;
-  location: string;
+  start_date: string;
+  end_date?: string;  // Optional for single-day events
+  start_time?: string;
+  end_time?: string;
+  all_day: boolean;
+  venue_name?: string;
+  address?: string;
 }
 
 const CreateEvent: React.FC = () => {
-  const { control, register, handleSubmit, reset, formState: { errors } } = useForm<EventFormData>();
+  const { control, register, handleSubmit, reset, watch, formState: { errors } } = useForm<EventFormData>({
+    defaultValues: {
+      all_day: false
+    }
+  });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,6 +32,7 @@ const CreateEvent: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   
   const navigate = useNavigate();
+  const watchAllDay = watch('all_day');
   
   // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,13 +62,26 @@ const CreateEvent: React.FC = () => {
     setSuccessMessage('');
     
     try {
-      // Format date for API
-      const formattedDate = new Date(data.event_date).toISOString();
+      // Format dates for API
+      const formattedStartDate = new Date(data.start_date).toISOString();
+      let formattedEndDate = data.end_date ? new Date(data.end_date).toISOString() : null;
+      
+      // If no end date is provided, use start date
+      if (!formattedEndDate && !data.all_day) {
+        formattedEndDate = formattedStartDate;
+      }
       
       // Step 1: Create the event
       const eventResponse = await post<{ id: string }>('/events', {
-        ...data,
-        event_date: formattedDate
+        title: data.title,
+        description: data.description,
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        all_day: data.all_day,
+        venue_name: data.venue_name,
+        address: data.address
       });
       
       // Step 2: If we have an image, upload it to the event
@@ -85,8 +109,13 @@ const CreateEvent: React.FC = () => {
       reset({
         title: '',
         description: '',
-        event_date: '',
-        location: ''
+        start_date: '',
+        end_date: '',
+        start_time: '',
+        end_time: '',
+        all_day: false,
+        venue_name: '',
+        address: ''
       });
       clearImage();
       
@@ -98,11 +127,10 @@ const CreateEvent: React.FC = () => {
     }
   };
   
-  // Format date-time for the input
-  const formatDateTimeForInput = () => {
+  // Format date for the input
+  const formatDateForInput = () => {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
+    return now.toISOString().split('T')[0]; // Returns YYYY-MM-DD
   };
 
   return (
@@ -160,35 +188,111 @@ const CreateEvent: React.FC = () => {
             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
           )}
         </div>
-        
-        {/* Event Date & Time */}
-        <div>
-          <label htmlFor="event_date" className="block text-sm font-medium text-gray-700">
-            Event Date & Time *
-          </label>
+
+        {/* All-day Event Checkbox */}
+        <div className="flex items-center">
           <input
-            id="event_date"
-            type="datetime-local"
-            defaultValue={formatDateTimeForInput()}
-            {...register('event_date', { required: 'Event date is required' })}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            id="all_day"
+            type="checkbox"
+            {...register('all_day')}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          {errors.event_date && (
-            <p className="text-red-500 text-sm mt-1">{errors.event_date.message}</p>
+          <label htmlFor="all_day" className="ml-2 block text-sm text-gray-700">
+            All-day event
+          </label>
+        </div>
+        
+        {/* Event Date & Time Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Start Date */}
+          <div>
+            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
+              Start Date *
+            </label>
+            <input
+              id="start_date"
+              type="date"
+              defaultValue={formatDateForInput()}
+              {...register('start_date', { required: 'Start date is required' })}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            />
+            {errors.start_date && (
+              <p className="text-red-500 text-sm mt-1">{errors.start_date.message}</p>
+            )}
+          </div>
+          
+          {/* End Date (optional) */}
+          <div>
+            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
+              End Date
+            </label>
+            <input
+              id="end_date"
+              type="date"
+              {...register('end_date')}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            />
+          </div>
+          
+          {/* Show time fields only if not an all-day event */}
+          {!watchAllDay && (
+            <>
+              {/* Start Time */}
+              <div>
+                <label htmlFor="start_time" className="block text-sm font-medium text-gray-700">
+                  Start Time
+                </label>
+                <input
+                  id="start_time"
+                  type="time"
+                  {...register('start_time')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                />
+              </div>
+              
+              {/* End Time */}
+              <div>
+                <label htmlFor="end_time" className="block text-sm font-medium text-gray-700">
+                  End Time
+                </label>
+                <input
+                  id="end_time"
+                  type="time"
+                  {...register('end_time')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                />
+              </div>
+            </>
           )}
         </div>
         
-        {/* Event Location */}
-        <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-            Location
-          </label>
-          <input
-            id="location"
-            type="text"
-            {...register('location')}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          />
+        {/* Event Location Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Venue Name */}
+          <div>
+            <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700">
+              Venue Name
+            </label>
+            <input
+              id="venue_name"
+              type="text"
+              {...register('venue_name')}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            />
+          </div>
+          
+          {/* Address */}
+          <div>
+            <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+              Address
+            </label>
+            <input
+              id="address"
+              type="text"
+              {...register('address')}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            />
+          </div>
         </div>
         
         {/* Event Image */}

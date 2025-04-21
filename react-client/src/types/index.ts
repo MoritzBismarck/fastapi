@@ -24,8 +24,13 @@ export interface User {
     id: number;
     title: string;
     description: string;
-    event_date: string;
-    location?: string;
+    start_date: string;
+    end_date?: string;
+    start_time?: string;
+    end_time?: string;
+    all_day: boolean;
+    venue_name?: string;
+    address?: string;
     image_url?: string;
     created_at: string;
   }
