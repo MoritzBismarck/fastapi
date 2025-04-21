@@ -53,12 +53,21 @@ const LikedEvents: React.FC = () => {
       
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Liked Events</h1>
-        <button 
-          onClick={() => navigate('/events')}
-          className="text-blue-700 underline hover:text-blue-900"
-        >
-          Back to Events
-        </button>
+        <div>
+          <button 
+            onClick={() => navigate('/events')}
+            className="text-blue-700 underline hover:text-blue-900 mr-4"
+          >
+            Back to Events
+          </button>
+          
+          <button 
+            onClick={() => navigate('/events/create')}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Create New Event
+          </button>
+        </div>
       </div>
       
       {errorMessage && (
@@ -84,7 +93,7 @@ const LikedEvents: React.FC = () => {
       ) : (
         <div className="space-y-6">
           {events.map(event => (
-            <div key={event.id}>
+            <div key={event.id} className="relative">
               <EventCard 
                 event={event}
                 showActionButtons={false}

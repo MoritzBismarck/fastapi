@@ -104,13 +104,13 @@ const Friends: React.FC = () => {
   const getButtonText = (user: User) => {
     switch (user.relationship) {
       case 'none': 
-        return 'Add Friend';
+        return 'Like';
       case 'request_sent': 
-        return 'Cancel Request';
+        return 'Mog ni mehr';
       case 'request_received': 
-        return 'Accept';
+        return 'Like back';
       case 'friends': 
-        return 'Remove';
+        return 'Mog ni mehr';
       default: 
         return 'Add Friend';
     }

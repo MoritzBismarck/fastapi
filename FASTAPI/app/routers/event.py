@@ -21,13 +21,58 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
+    # Create a new event with the provided data
     new_event = models.Event(**event.model_dump())
     db.add(new_event)
     db.commit()
     db.refresh(new_event)
     return new_event
 
-# app/main.py
+@router.post("/{event_id}/image", status_code=status.HTTP_200_OK, response_model=schemas.Event)
+async def upload_event_image(
+    event_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Upload an image for an event"""
+    
+    # Check if the event exists
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found"
+        )
+    
+    # Generate a unique filename
+    original_filename = file.filename
+    file_extension = original_filename.split(".")[-1] if "." in original_filename else "jpg"
+    object_name = f"event-images/{event_id}/{uuid.uuid4()}.{file_extension}"
+    
+    try:
+        # Reset the file pointer to the beginning
+        file.file.seek(0)
+        # Upload the file to storage service
+        storage_service.upload_fileobj(file.file, object_name)
+        
+        # Get the public URL
+        file_url = storage_service.generate_file_url(object_name)
+        
+        # Update the event's image URL
+        db.query(models.Event).filter(models.Event.id == event_id).update(
+            {"image_url": file_url},
+            synchronize_session=False
+        )
+        db.commit()
+        
+        # Return the updated event
+        return db.query(models.Event).filter(models.Event.id == event_id).first()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload image: {str(e)}"
+        )
 
 @router.post("/upload/")
 async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: models.User = Depends(oauth2.get_current_user)):

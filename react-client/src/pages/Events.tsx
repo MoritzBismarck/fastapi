@@ -86,12 +86,19 @@ const Events: React.FC = () => {
       
       <div className="mb-8">
         <h1 className="text-xl font-bold mb-4">Events</h1>
-        <div className="mb-4">
+        <div className="w-full flex justify-center items-center py-4">
           <button 
             onClick={() => navigate('/events/liked')}
             className="text-blue-700 underline hover:text-blue-900"
           >
             View My Liked Events
+          </button>
+          <span className="mx-4 select-none text-gray-400">|</span>
+          <button 
+            onClick={() => navigate('/events/create')}
+            className="text-blue-700 underline hover:text-blue-900"
+          >
+            Create New Event
           </button>
         </div>
       </div>

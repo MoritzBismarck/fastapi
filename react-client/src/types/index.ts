@@ -26,6 +26,7 @@ export interface User {
     description: string;
     event_date: string;
     location?: string;
+    image_url?: string;
     created_at: string;
   }
   

@@ -67,6 +67,7 @@ class Event(Base):
     description = Column(String, nullable=False)
     event_date = Column(TIMESTAMP(timezone=True), nullable=False)
     location = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)  # Add this line
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     
 class EventLike(Base):

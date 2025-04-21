@@ -116,6 +116,7 @@ class EventBase(BaseModel):
     description: str
     event_date: datetime
     location: Optional[str] = None
+    image_url: Optional[str] = None  # Add this line
 
 class EventCreate(EventBase):
     pass

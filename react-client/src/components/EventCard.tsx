@@ -31,6 +31,17 @@ const EventCard: React.FC<EventCardProps> = ({
 
   return (
     <div className="border border-gray-300 rounded p-6 max-w-md w-full mx-auto bg-white shadow-md">
+      {/* Display event image if available */}
+      {event.image_url && (
+        <div className="mb-4 -mx-6 -mt-6">
+          <img 
+            src={event.image_url} 
+            alt={event.title} 
+            className="w-full h-64 object-cover rounded-t"
+          />
+        </div>
+      )}
+      
       <div className="flex justify-between items-start mb-4">
         <h2 className="text-xl font-bold">{event.title}</h2>
         {event.location && (
@@ -53,7 +64,7 @@ const EventCard: React.FC<EventCardProps> = ({
           {onSkip && (
             <button 
               onClick={onSkip}
-              className="border border-red-300 bg-red-50 text-red-800 w-16 h-16 rounded-full text-2xl font-bold hover:bg-red-100"
+              className="border border-gray-300 px-6 py-2 rounded hover:bg-gray-100"
               aria-label="Skip event"
             >
               X
@@ -63,10 +74,10 @@ const EventCard: React.FC<EventCardProps> = ({
           {onLike && (
             <button 
               onClick={onLike}
-              className="border border-green-500 bg-green-100 text-green-800 w-16 h-16 rounded-full text-2xl font-bold hover:bg-green-200"
+              className="border border-green-500 bg-green-100 text-green-800 px-6 py-2 rounded hover:bg-green-200"
               aria-label="Like event"
             >
-              ♥
+              Love
             </button>
           )}
           

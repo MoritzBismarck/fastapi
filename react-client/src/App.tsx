@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Events from './pages/Events';
 import LikedEvents from './pages/LikedEvents';
+import CreateEvent from './pages/CreateEvent';
 
 const App: React.FC = () => {
   return (
@@ -53,6 +54,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <LikedEvents />
+                </ProtectedRoute>
+              }
+            />
+            <Route 
+              path="/events/create" 
+              element={
+                <ProtectedRoute>
+                  <CreateEvent />
                 </ProtectedRoute>
               }
             />
