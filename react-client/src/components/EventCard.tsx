@@ -1,144 +1,137 @@
 // react-client/src/components/EventCard.tsx
-import React from 'react';
-import { Event } from '../types';
+import React, { useState } from 'react'
+import { Event } from '../types'
 
 interface EventCardProps {
-  event: Event;
-  onLike?: () => void;
-  onSkip?: () => void;
-  onUnlike?: () => void;
-  showActionButtons?: boolean;
+  event: Event
+  onLike?: () => void
+  onSkip?: () => void
+  onUnlike?: () => void
+  showActionButtons?: boolean
 }
 
-const EventCard: React.FC<EventCardProps> = ({ 
-  event, 
-  onLike, 
-  onSkip, 
+const EventCard: React.FC<EventCardProps> = ({
+  event,
+  onLike,
+  onSkip,
   onUnlike,
-  showActionButtons = true
+  showActionButtons = true,
 }) => {
-  // Format the date display
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const formatDateRange = () => {
-    const startDate = new Date(event.start_date);
-    const endDate = event.end_date ? new Date(event.end_date) : null;
-    
-    const dateOptions: Intl.DateTimeFormatOptions = { 
-      day: 'numeric', 
+    const start = new Date(event.start_date)
+    const end = event.end_date ? new Date(event.end_date) : null
+    const opts: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
       month: 'short',
-      year: 'numeric'
-    };
-    
-    // Format the start date
-    let formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
-    
-    // If there's an end date and it's different from the start date
-    if (endDate && endDate.toDateString() !== startDate.toDateString()) {
-      formattedDate += ` - ${endDate.toLocaleDateString('en-US', dateOptions)}`;
+      year: 'numeric',
     }
-    
-    return formattedDate;
-  };
-  
-  // Format the time display
+    let s = start.toLocaleDateString('en-US', opts)
+    if (end && end.toDateString() !== start.toDateString()) {
+      s += ` – ${end.toLocaleDateString('en-US', opts)}`
+    }
+    return s
+  }
+
   const formatTimeRange = () => {
-    if (event.all_day) {
-      return "All day";
-    }
-    
-    let timeStr = "";
-    
-    if (event.start_time) {
-      timeStr = event.start_time;
-      
-      if (event.end_time) {
-        timeStr += ` - ${event.end_time}`;
-      }
-    }
-    
-    return timeStr || "Time not specified";
-  };
-  
-  // Format the location display
-  const formatLocation = () => {
-    if (!event.venue_name && !event.address) {
-      return "Location not specified";
-    }
-    
-    if (event.venue_name && event.address) {
-      return `${event.venue_name}, ${event.address}`;
-    }
-    
-    return event.venue_name || event.address;
-  };
+    if (event.all_day) return 'All day'
+    if (!event.start_time) return 'Time not specified'
+    return event.end_time
+      ? `${event.start_time} – ${event.end_time}`
+      : event.start_time
+  }
+
+  // shared classes for 90s‑style bevel
+  const win95Btn =
+    'w-10 h-10 flex items-center justify-center text-2xl bg-[#c0c0c0] ' +
+    'border-t-[2px] border-l-[2px] border-white ' +
+    'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
+    'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white'
 
   return (
-    <div className="border border-gray-300 rounded p-6 max-w-md w-full mx-auto bg-white shadow-md">
-      {/* Display event image if available */}
+    <div className="border-4 border-black rounded-none p-6 max-w-md w-full mx-auto bg-white shadow-none flex flex-col">
+      {/* IMAGE */}
       {event.image_url && (
-        <div className="mb-4 -mx-6 -mt-6">
-          <img 
-            src={event.image_url} 
-            alt={event.title} 
-            className="w-full h-64 object-cover rounded-t"
+        <div className="mb-4 -mx-6 -mt-6 h-64 relative">
+          <img
+            src={event.image_url}
+            alt={event.title}
+            className="w-full h-full object-cover rounded-none border-b-4 border-black"
           />
         </div>
       )}
-      
+
+      {/* TITLE & VENUE */}
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold">{event.title}</h2>
+        <h2 className="text-xl font-bold uppercase tracking-wide">
+          {event.title}
+        </h2>
+        {event.venue_name && (
+          <div className="text-sm font-mono bg-black text-white px-2 py-1">
+            {event.venue_name}
+          </div>
+        )}
       </div>
-      
-      <div className="mb-4">
+
+      {/* WHEN */}
+      <div className="mb-4 font-mono">
         <div className="text-sm font-bold mb-1">When:</div>
         <div>{formatDateRange()}</div>
         <div>{formatTimeRange()}</div>
       </div>
-      
-      <div className="mb-4">
-        <div className="text-sm font-bold mb-1">Where:</div>
-        <div>{formatLocation()}</div>
-      </div>
-      
-      <div className="mb-6">
-        <div className="text-sm font-bold mb-1">Description:</div>
-        <p className="whitespace-pre-line">{event.description}</p>
-      </div>
-      
+
+      {/* ACTION BUTTONS (always visible) */}
       {showActionButtons && (
-        <div className="flex justify-between pt-4 border-t border-gray-200">
+        <div className="flex justify-center space-x-4 mb-4">
           {onSkip && (
-            <button 
+            <button
               onClick={onSkip}
-              className="border border-gray-300 px-6 py-2 rounded hover:bg-gray-100"
-              aria-label="Skip event"
+              aria-label="Skip"
+              className={win95Btn}
             >
-              X
+              ×
             </button>
           )}
-          
           {onLike && (
-            <button 
+            <button
               onClick={onLike}
-              className="border border-green-500 bg-green-100 text-green-800 px-6 py-2 rounded hover:bg-green-200"
-              aria-label="Like event"
+              aria-label="Like"
+              className={win95Btn}
             >
-              Love
-            </button>
-          )}
-          
-          {onUnlike && (
-            <button 
-              onClick={onUnlike}
-              className="border border-red-500 bg-red-100 text-red-800 px-6 py-2 rounded hover:bg-red-200"
-              aria-label="Unlike event"
-            >
-              Unlike
+              ♥
             </button>
           )}
         </div>
       )}
-    </div>
-  );
-};
 
-export default EventCard;
+      {/* EXPANDED-ONLY: description + address */}
+      {isExpanded && (
+        <>
+          <div className="mb-4 font-sans">
+            <div className="text-sm font-bold mb-1">Description:</div>
+            <p className="whitespace-pre-line">{event.description}</p>
+          </div>
+          {event.address && (
+            <div className="mb-4 font-sans">
+              <div className="text-sm font-bold mb-1">Address:</div>
+              <div>{event.address}</div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* SHOW MORE / SHOW LESS */}
+      <div className="mt-auto pt-4 border-t-4 border-black text-center">
+        <button
+          onClick={() => setIsExpanded(x => !x)}
+          className="font-bold uppercase tracking-wider"
+        >
+          {isExpanded ? 'Show less' : 'Show more'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default EventCard
