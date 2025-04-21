@@ -77,7 +77,7 @@ const Friends: React.FC = () => {
           setFriends(friends.filter(f => f.id !== user.friendshipId));
           // Add back to users with 'none' relationship
           setUsers([...users, { 
-            ...user, // Fix: use 'user' instead of 'u'
+            ...user,
             relationship: 'none', 
             friendshipId: null,
             liked: false 
@@ -108,7 +108,7 @@ const Friends: React.FC = () => {
       case 'request_sent': 
         return 'Mog ni mehr';
       case 'request_received': 
-        return 'Like back';
+        return 'Like';
       case 'friends': 
         return 'Mog ni mehr';
       default: 
@@ -150,17 +150,31 @@ const Friends: React.FC = () => {
         <>
           {/* People to Friend Section */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">People to Friend</h2>
+            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">People</h2>
             
             {users.length > 0 ? (
               <ul className="space-y-4">
                 {users.map(user => (
                   <li key={user.id} className="border border-gray-300 p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-bold">{user.username}</p>
-                      {user.relationship === 'request_received' && (
-                        <p className="text-sm text-green-700">Sent you a friend request!</p>
-                      )}
+                    <div className="flex items-center">
+                      {/* Profile Picture */}
+                      <div className="mr-3 w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                        {user.profile_picture ? (
+                          <img 
+                            src={user.profile_picture} 
+                            alt={user.username}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <p className="font-bold">{user.username}</p>
+                      </div>
                     </div>
                     
                     <button 
@@ -179,13 +193,28 @@ const Friends: React.FC = () => {
           
           {/* My Friends Section */}
           <section>
-            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">My Friends</h2>
+            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">My Friends | You like each other</h2>
             
             {friends.length > 0 ? (
               <ul className="space-y-4">
                 {friends.map(friendship => (
                   <li key={friendship.id} className="border border-gray-300 p-4 flex justify-between items-center">
-                    <div>
+                    <div className="flex items-center">
+                      {/* Profile Picture */}
+                      <div className="mr-3 w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                        {friendship.friend.profile_picture ? (
+                          <img 
+                            src={friendship.friend.profile_picture} 
+                            alt={friendship.friend.username}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
+                            {friendship.friend.username.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      
                       <p className="font-bold">{friendship.friend.username}</p>
                     </div>
                     <button 

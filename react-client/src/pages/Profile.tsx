@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { get, put } from '../api/client';
 import { User } from '../types';
 import { uploadProfilePicture } from '../api/profileApi';
+import { useNavigate } from 'react-router-dom';
 
 const Profile: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -11,6 +12,8 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -96,6 +99,12 @@ const Profile: React.FC = () => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    // After logout, redirect to login page
+    navigate('/');
   };
 
   if (isLoading && !profileData) {
@@ -226,6 +235,14 @@ const Profile: React.FC = () => {
               className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
             >
               Edit Profile
+            </button>
+          </div>
+          <div className="mt-6">
+            <button
+              onClick={handleLogout}
+              className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
+            >
+              Logout
             </button>
           </div>
         </div>

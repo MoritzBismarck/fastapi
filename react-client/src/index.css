@@ -34,3 +34,60 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+html {
+  height: 100%;
+  margin: 0;
+  overflow-y: scroll;    /* always show scrollbar */
+}
+
+/* Body just flows, no overflow rule here */
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 16px;
+  background-color: #c0c0c0;  /* track */
+}
+::-webkit-scrollbar-track {
+  background-color: #c0c0c0;
+}
+::-webkit-scrollbar-thumb {
+  box-sizing: border-box;     /* include border in width */
+  background-color: #fff;     /* thumb */
+  border: 2px solid #808080;  /* 90s‑style border */
+}
+::-webkit-scrollbar-button {
+  width: 16px;
+  height: 16px;
+  background-color: #c0c0c0;
+}
+/* Up arrow */
+::-webkit-scrollbar-button:vertical:decrement {
+  background-image:
+    linear-gradient(to bottom,
+      #808080 0%, #808080 33%,
+      transparent 33%, transparent 66%,
+      #808080 66%, #808080 100%);
+  background-repeat: no-repeat;
+  background-position: center 4px;
+}
+/* Down arrow */
+::-webkit-scrollbar-button:vertical:increment {
+  background-image:
+    linear-gradient(to top,
+      #808080 0%, #808080 33%,
+      transparent 33%, transparent 66%,
+      #808080 66%, #808080 100%);
+  background-repeat: no-repeat;
+  background-position: center 4px;
+}
+
+/* Firefox */
+html {
+  scrollbar-width: auto;          /* track+thumb wide */
+  scrollbar-color: #fff #c0c0c0;  /* thumb, track */
+}
