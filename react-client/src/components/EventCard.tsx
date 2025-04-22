@@ -44,7 +44,7 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // shared classes for 90s‑style bevel
   const win95Btn =
-    'w-10 h-10 flex items-center justify-center text-2xl bg-[#c0c0c0] ' +
+    'px-4 py-2 flex items-center justify-center text-2xl bg-[#c0c0c0] ' +
     'border-t-[2px] border-l-[2px] border-white ' +
     'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
     'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white'
@@ -83,7 +83,7 @@ const EventCard: React.FC<EventCardProps> = ({
 
       {/* ACTION BUTTONS (always visible) */}
       {showActionButtons && (
-        <div className="flex justify-center space-x-4 mb-4">
+        <div className="flex w-full justify-between px-8 mb-4">
           {onSkip && (
             <button
               onClick={onSkip}
