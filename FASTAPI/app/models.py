@@ -16,16 +16,24 @@ class Post(Base):
     owner = relationship("User")
 
 
+# Update in FASTAPI/app/models.py - in the User class
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, nullable=False)
     username = Column(String, nullable=True, unique=True)
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
-    first_name = Column(String, nullable=True)  # New field
-    last_name = Column(String, nullable=True)   # New field
-    profile_picture = Column(String, nullable=True)  # New field for storing image URL
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    profile_picture = Column(String, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    
+    # Add this field to track which invitation token was used
+    invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
+    
+    # Add this relationship
+    invitation_token = relationship("InvitationToken", back_populates="invited_users")
 
 
 class Friendship(Base):
@@ -57,6 +65,7 @@ class InvitationToken(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Made nullable for first admin
     expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     session_token = Column(String, nullable=True)
+    invited_users = relationship("User", back_populates="invitation_token")
 
 
 class Event(Base):

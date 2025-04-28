@@ -1,10 +1,11 @@
 import uuid
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from .. import models, schemas, utils, oauth2
 from fastapi import Body, FastAPI, Response, status, HTTPException, Depends, APIRouter, UploadFile, File
 from ..database import engine, get_db
 from sqlalchemy.orm import Session
 from ..services import storage_service  # Import the storage_service module
+from ..services.invitation_service import InvitationService
 
 router = APIRouter(
     prefix="/users",
@@ -178,24 +179,65 @@ def get_users_overview(
                 "friend": friend_dict,  # Use the dictionary instead of the User object
                 "status": f.status
             })
+
+    if current_user.invitation_token_id:
+        # Prioritize users who registered with the same invitation token
+        same_token_users = db.query(models.User).filter(
+            and_(
+                models.User.invitation_token_id == current_user.invitation_token_id,
+                models.User.id != current_user.id
+            )
+        ).all()
+        
+        # Add a "recommended" flag to users who shared the same token
+        token_user_ids = {user.id for user in same_token_users}
+        
+        # Tag users as recommended in the processed_users list
+        for user_data in processed_users:
+            user_data["recommended"] = user_data["id"] in token_user_ids
+            
+        # Move recommended users to the top of the list
+        processed_users.sort(key=lambda u: (not u.get("recommended"), u["relationship"] != "request_received", u["username"]))
     
     return {
         "users": processed_users,
         "friends": established_friendships
     }
 
-@router.post("/{invitation}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    #hash the password from user.password
-    # invitation = db.query(models.Invitation).filter(models.Invitation.token == invitation).first()
-    # if not invitation:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invitation not found")
+# Update in FASTAPI/app/routers/user.py
+
+@router.post("/{token}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+def create_user(
+    token: str,
+    user: schemas.UserCreate, 
+    db: Session = Depends(get_db)
+):
+    # Validate the invitation token
+    invitation = InvitationService.validate_token(db, token)
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Invalid or expired invitation token"
+        )
+    
+    # Hash the password
     hashed_password = utils.hash(user.password)
     user.password = hashed_password
+    
+    # Create the user
     new_user = models.User(**user.model_dump())
+    
+    # Link the user to the invitation token they used
+    new_user.invitation_token_id = invitation.id
+    
     db.add(new_user)
+    
+    # Increment the usage count for this token
+    invitation.usage_count += 1
+    
     db.commit()
     db.refresh(new_user)
+    
     return new_user 
 
 @router.get('/{id}', response_model=schemas.UserOut)

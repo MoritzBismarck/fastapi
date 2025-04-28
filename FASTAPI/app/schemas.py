@@ -101,6 +101,7 @@ class UserOverview(BaseModel):
     liked: bool
     friendshipId: Optional[int] = None
     hasLikedCurrentUser: bool
+    recommended: Optional[bool] = False
 
 class FriendshipOverview(BaseModel):
     id: int
@@ -162,6 +163,25 @@ class Notification(NotificationBase):
     id: int
     user_id: int
     is_read: bool
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+# Add these to FASTAPI/app/schemas.py
+
+class InvitationTokenBase(BaseModel):
+    description: str
+    
+class InvitationTokenCreate(InvitationTokenBase):
+    expires_days: Optional[int] = 30
+
+class InvitationTokenOut(InvitationTokenBase):
+    id: int
+    token: str
+    created_by: int
+    expires_at: datetime
+    usage_count: int
     created_at: datetime
     
     class Config:
