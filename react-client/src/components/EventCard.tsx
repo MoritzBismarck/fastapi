@@ -42,12 +42,13 @@ const EventCard: React.FC<EventCardProps> = ({
       : event.start_time
   }
 
-  // shared classes for 90s‑style bevel
+  // shared classes for 90s‑style bevel - like the original design
   const win95Btn =
-    'px-4 py-2 flex items-center justify-center text-2xl bg-[#c0c0c0] ' +
+    'px-4 py-2 flex items-center justify-center text-3xl bg-[#c0c0c0] ' +
     'border-t-[2px] border-l-[2px] border-white ' +
     'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
-    'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white'
+    'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white ' +
+    'w-24 h-12'
 
   return (
     <div className="border-4 border-black rounded-none p-6 max-w-md w-full mx-auto bg-white shadow-none flex flex-col">
@@ -90,7 +91,7 @@ const EventCard: React.FC<EventCardProps> = ({
               aria-label="Skip"
               className={win95Btn}
             >
-              ×
+              <span className="text-red-600 font-bold">×</span>
             </button>
           )}
           {onLike && (
@@ -99,7 +100,7 @@ const EventCard: React.FC<EventCardProps> = ({
               aria-label="Like"
               className={win95Btn}
             >
-              ♥
+              <span className="text-green-600 font-bold">♥</span>
             </button>
           )}
         </div>

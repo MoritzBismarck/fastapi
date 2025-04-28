@@ -30,7 +30,7 @@ def get_notifications(
     
     return notifications
 
-@router.patch("/{id}/read", response_model=schemas.Notification)
+@router.api_route("/{id}/read", methods=["PATCH", "POST"], response_model=schemas.Notification)
 def mark_notification_as_read(
     id: int,
     db: Session = Depends(get_db),

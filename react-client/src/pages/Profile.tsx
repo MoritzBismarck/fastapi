@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
+import Button from '../components/Button'; // Import our new Button component
 import { get, put } from '../api/client';
 import { User } from '../types';
 import { uploadProfilePicture } from '../api/profileApi';
@@ -136,14 +137,14 @@ const Profile: React.FC = () => {
                 className="mb-2"
               />
               
-              <button
+              <Button
                 type="button"
                 onClick={handleFileUpload}
                 disabled={!selectedFile || uploading}
-                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1 mr-2 inline-block"
+                size="sm"
               >
                 {uploading ? 'Uploading...' : 'Upload Picture'}
-              </button>
+              </Button>
             </div>
             
             <div className="mb-4">
@@ -179,22 +180,21 @@ const Profile: React.FC = () => {
               />
             </div>
             
-            <div className="mt-6">
-              <button
+            <div className="mt-6 flex space-x-4">
+              <Button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1 mr-2"
+                variant="secondary"
               >
                 Cancel
-              </button>
+              </Button>
               
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
               >
                 {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -229,21 +229,20 @@ const Profile: React.FC = () => {
             
             <p className="mb-6">Created at: {formatDate(profileData?.created_at)}</p>
             
-            {/* Windows 95 style button */}
-            <button
-              onClick={() => setIsEditing(true)}
-              className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
-            >
-              Edit Profile
-            </button>
-          </div>
-          <div className="mt-6">
-            <button
-              onClick={handleLogout}
-              className="bg-gray-300 border-t border-l border-gray-200 border-b border-r border-gray-600 px-4 py-1"
-            >
-              Logout
-            </button>
+            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <Button
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Profile
+              </Button>
+              
+              <Button
+                onClick={handleLogout}
+                variant="secondary"
+              >
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       )}

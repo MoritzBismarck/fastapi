@@ -57,6 +57,13 @@ const Header: React.FC = () => {
             >
               {username}
             </Link>
+            <span className="mx-2 text-black">|</span>
+            <Link 
+              to="/design-test" 
+              className={`${isActive('/design-test') ? 'text-purple-700' : 'text-blue-700'} underline`}
+            >
+              Design Lab
+            </Link>
           </div>
         </nav>
       </div>

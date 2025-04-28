@@ -163,6 +163,88 @@ def get_liked_events(
     
     return liked_events
 
+@router.get("/{id}/detail", response_model=schemas.EventWithLikedUsers)
+def get_event_detail(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    # Get the event
+    event = db.query(models.Event).filter(models.Event.id == id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {id} not found"
+        )
+    
+    # Get IDs of the user's friends
+    # First, get all accepted friendships where current user is either requester or addressee
+    friend_ids = []
+    
+    # Find friendships where user is requester
+    requester_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.requester_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add addressee IDs to friend_ids
+    for friendship in requester_friendships:
+        friend_ids.append(friendship.addressee_id)
+    
+    # Find friendships where user is addressee
+    addressee_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.addressee_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add requester IDs to friend_ids
+    for friendship in addressee_friendships:
+        friend_ids.append(friendship.requester_id)
+    
+    # Get users who have liked this event and are friends with current user
+    friends_who_liked = db.query(models.User).join(
+        models.EventLike,
+        models.EventLike.user_id == models.User.id
+    ).filter(
+        and_(
+            models.EventLike.event_id == id,
+            models.User.id.in_(friend_ids)
+        )
+    ).all()
+    
+    # Check if current user has liked this event
+    user_liked = db.query(models.EventLike).filter(
+        and_(
+            models.EventLike.user_id == current_user.id,
+            models.EventLike.event_id == id
+        )
+    ).first() is not None
+    
+    # Combine the data
+    event_data = {
+        "id": event.id,
+        "title": event.title,
+        "description": event.description,
+        "start_date": event.start_date,
+        "end_date": event.end_date,
+        "start_time": event.start_time,
+        "end_time": event.end_time,
+        "all_day": event.all_day,
+        "venue_name": event.venue_name,
+        "address": event.address,
+        "image_url": event.image_url,
+        "created_at": event.created_at,
+        "liked_by_current_user": user_liked,
+        "liked_by_friends": friends_who_liked
+    }
+    
+    return event_data
+
 @router.get("/{id}", response_model=schemas.Event)
 def get_event(
     id: int,

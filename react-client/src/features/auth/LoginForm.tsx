@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import Button from '../../components/Button';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -52,13 +53,12 @@ const LoginForm: React.FC = () => {
         </div>
       )}
       
-      <button 
+      <Button 
         type="submit" 
-        className="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
         disabled={isLoading}
       >
         {isLoading ? 'Processing...' : 'Login'}
-      </button>
+      </Button>
     </form>
   );
 };

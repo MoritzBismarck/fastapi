@@ -72,7 +72,7 @@ const Events: React.FC = () => {
 
       {/* title + links in one row */}
       <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Events</h1>
+        <h1 className="text-xl font-bold">Event Matcher</h1>
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate('/events/liked')}

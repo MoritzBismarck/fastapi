@@ -19,6 +19,9 @@ class UserOut(BaseModel):
     last_name: Optional[str] = None
     profile_picture: Optional[str] = None
     created_at: datetime
+    
+    class Config:
+        orm_mode = True
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -138,6 +141,13 @@ class EventLike(BaseModel):
     user_id: int
     event_id: int
     created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+class EventWithLikedUsers(Event):
+    liked_by_current_user: bool = False
+    liked_by_friends: List[UserOut] = []
     
     class Config:
         orm_mode = True

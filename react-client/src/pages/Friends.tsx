@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
+import Button from '../components/Button'; // Import our new Button component
 import { User, Friendship } from '../types';
-import { del, get, post, put } from '../api/client'; // Import basic API functions
+import { del, get, post, put } from '../api/client';
 
 const Friends: React.FC = () => {
   // State for users and friends
@@ -136,7 +137,7 @@ const Friends: React.FC = () => {
     <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
       
-      <h1 className="text-2xl font-bold mb-6">Friends</h1>
+      <h1 className="text-2xl font-bold mb-6">Friend Finder</h1>
       
       {error && (
         <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
@@ -150,7 +151,12 @@ const Friends: React.FC = () => {
         <>
           {/* People to Friend Section */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">People</h2>
+            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
+              People{' '}
+              <span className="text-base font-medium text-gray-600">
+                (To discover)
+              </span>
+            </h2>
             
             {users.length > 0 ? (
               <ul className="space-y-4">
@@ -177,12 +183,12 @@ const Friends: React.FC = () => {
                       </div>
                     </div>
                     
-                    <button 
-                      className="border border-gray-500 px-4 py-1 hover:bg-gray-300"
+                    <Button 
+                      size="sm"
                       onClick={() => handleFriendAction(user, getAction(user))}
                     >
                       {getButtonText(user)}
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -193,7 +199,12 @@ const Friends: React.FC = () => {
           
           {/* My Friends Section */}
           <section>
-            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">My Friends | You like each other</h2>
+          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
+            Friends{' '}
+            <span className="text-base font-medium text-gray-600">
+              (You like each other)
+            </span>
+          </h2>
             
             {friends.length > 0 ? (
               <ul className="space-y-4">
@@ -217,8 +228,9 @@ const Friends: React.FC = () => {
                       
                       <p className="font-bold">{friendship.friend.username}</p>
                     </div>
-                    <button 
-                      className="border border-gray-500 bg-red-100 text-red-700 px-4 py-1 hover:bg-red-200"
+                    <Button 
+                      variant="danger"
+                      size="sm"
                       onClick={() => handleFriendAction(
                         { 
                           ...friendship.friend, 
@@ -229,7 +241,7 @@ const Friends: React.FC = () => {
                       )}
                     >
                       Remove
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
