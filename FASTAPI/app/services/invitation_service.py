@@ -49,7 +49,9 @@ class InvitationService:
         if not invitation:
             return None
         
-        if invitation.expires_at < datetime.now():
+        # Fix: Use datetime.now() with timezone info to match expires_at
+        current_time = datetime.now(invitation.expires_at.tzinfo)
+        if invitation.expires_at < current_time:
             return None
             
         return invitation

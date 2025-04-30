@@ -14,6 +14,8 @@ import LikedEvents from './pages/LikedEvents';
 import CreateEvent from './pages/CreateEvent';
 import EventDetail from './pages/EventDetail'; // We'll create this next
 import DesignTest from './pages/DesignTest';
+import InvitationManager from './pages/InvitationManager';
+import Signup from './pages/Signup';
 
 const App: React.FC = () => {
   return (
@@ -23,6 +25,7 @@ const App: React.FC = () => {
           <div className="font-mono max-w-4xl mx-auto p-4">
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route path="/signup/:token" element={<Signup />} />
               <Route 
                 path="/dashboard" 
                 element={
@@ -82,6 +85,14 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <DesignTest />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/invitation-manager" 
+                element={
+                  <ProtectedRoute>
+                    <InvitationManager />
                   </ProtectedRoute>
                 }
               />

@@ -33,7 +33,11 @@ class User(Base):
     invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
     
     # Add this relationship
-    invitation_token = relationship("InvitationToken", back_populates="invited_users")
+    invitation_token = relationship(
+    "InvitationToken", 
+    foreign_keys=[invitation_token_id],
+    back_populates="invited_users"
+)
 
 
 class Friendship(Base):
@@ -65,7 +69,11 @@ class InvitationToken(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Made nullable for first admin
     expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     session_token = Column(String, nullable=True)
-    invited_users = relationship("User", back_populates="invitation_token")
+    invited_users = relationship(
+    "User", 
+    foreign_keys="User.invitation_token_id",
+    back_populates="invitation_token"
+)
 
 
 class Event(Base):

@@ -55,3 +55,17 @@ def get_invitation_qrcode(
     qr_code = QRCodeService.generate_qr_code(registration_url, size)
     
     return Response(content=qr_code, media_type="image/png")
+
+
+# Add to FASTAPI/app/routers/invitation.py
+@router.get("/", response_model=List[schemas.InvitationTokenOut])
+def get_invitation_tokens(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Get all invitation tokens created by the current user"""
+    tokens = db.query(models.InvitationToken).filter(
+        models.InvitationToken.created_by == current_user.id
+    ).order_by(models.InvitationToken.created_at.desc()).all()
+    
+    return tokens
