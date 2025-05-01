@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from ..services.qrcode_service import QRCodeService
 
 from .. import models, schemas, oauth2
 from ..database import get_db
@@ -33,8 +34,6 @@ def create_invitation_token(
 
 # Add this to FASTAPI/app/routers/invitation.py
 
-from fastapi import Response
-from ..services.qrcode_service import QRCodeService
 
 @router.get("/{token_id}/qrcode", response_class=Response)
 def get_invitation_qrcode(
