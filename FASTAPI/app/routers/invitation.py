@@ -43,13 +43,23 @@ def get_invitation_qrcode(
     current_user: models.User = Depends(oauth2.get_current_user),
     size: int = 10
 ):
-    # Get the token
+    # Get the token with proper error handling
     invitation = db.query(models.InvitationToken).filter(models.InvitationToken.id == token_id).first()
+    
     if not invitation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation token not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Invitation token with ID {token_id} not found"
+        )
+    
+    # Add logging to debug
+    print(f"Found invitation token: {invitation.token} for ID: {token_id}")
+    
+    # Get your frontend URL from settings
+    frontend_url = "https://bone-social.com"  # You can also use settings.FRONTEND_URL if configured
     
     # Create URL for registration with this token
-    registration_url = f"http://yourdomain.com/signup/{invitation.token}"
+    registration_url = f"{frontend_url}/signup/{invitation.token}"
     
     # Generate QR code
     qr_code = QRCodeService.generate_qr_code(registration_url, size)
