@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(root_path="/api") # FastAPI Instance is created allowing us to use the FastAPI methods
 
-origins = ["*"] # list of origins that are allowed to access the backend
+origins = ["https://bone-social.com"] # list of origins that are allowed to access the backend
 
 app.add_middleware( #function that runs before the request is processed needed to allow the frontend to access the backend
     CORSMiddleware,
