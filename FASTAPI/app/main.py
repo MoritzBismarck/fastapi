@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI() # FastAPI Instance is created allowing us to use the FastAPI methods
+app = FastAPI(root_path="/api") # FastAPI Instance is created allowing us to use the FastAPI methods
 
 origins = ["*"] # list of origins that are allowed to access the backend
 
