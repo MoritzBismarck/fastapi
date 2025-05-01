@@ -16,6 +16,13 @@ router = APIRouter(
 def get_current_user_data(db: Session = Depends(get_db), current_user: models.User = Depends(oauth2.get_current_user)):
     return current_user
 
+
+@router.get("/count", response_model=dict)
+def get_user_count(db: Session = Depends(get_db)):
+    """Return the total count of users in the system"""
+    count = db.query(models.User).count()
+    return {"count": count}
+
 @router.put("/me", response_model=schemas.UserOut)
 def update_user_profile(
     user_update: schemas.UserProfileUpdate,
@@ -212,33 +219,51 @@ def create_user(
     user: schemas.UserCreate, 
     db: Session = Depends(get_db)
 ):
-    # Validate the invitation token
-    invitation = InvitationService.validate_token(db, token)
-    if not invitation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Invalid or expired invitation token"
-        )
+    # Check if this is the first user in the system
+    user_count = db.query(models.User).count()
+    is_first_user = user_count == 0
+    
+    # For the first user or when token is "first-user", we bypass validation
+    if not is_first_user and token != "first-user":
+        # Validate the invitation token
+        invitation = InvitationService.validate_token(db, token)
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Invalid or expired invitation token"
+            )
+        # Store the invitation ID
+        invitation_id = invitation.id
+        
+        # Link the user to the invitation token they used
+        user_data = user.model_dump()
+        user_data["invitation_token_id"] = invitation_id
+    else:
+        # If this is the first user but not using the special token
+        if token != "first-user" and not is_first_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token for first user creation"
+            )
+        user_data = user.model_dump()
     
     # Hash the password
     hashed_password = utils.hash(user.password)
-    user.password = hashed_password
+    user_data["password"] = hashed_password
     
     # Create the user
-    new_user = models.User(**user.model_dump())
+    new_user = models.User(**user_data)
     
-    # Link the user to the invitation token they used
-    new_user.invitation_token_id = invitation.id
+    # For non-first users with a valid invitation, update usage count
+    if not is_first_user and token != "first-user":
+        invitation = db.query(models.InvitationToken).filter(models.InvitationToken.id == invitation_id).first()
+        invitation.usage_count += 1
     
     db.add(new_user)
-    
-    # Increment the usage count for this token
-    invitation.usage_count += 1
-    
     db.commit()
     db.refresh(new_user)
     
-    return new_user 
+    return new_user
 
 @router.get('/{id}', response_model=schemas.UserOut)
 def get_user(id: int, db: Session = Depends(get_db),):

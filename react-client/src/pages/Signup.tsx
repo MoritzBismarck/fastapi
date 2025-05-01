@@ -1,12 +1,17 @@
 // react-client/src/pages/Signup.tsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { post } from '../api/client';
 import Button from '../components/Button';
 
-const Signup: React.FC = () => {
+const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check if this is first user based on path rather than prop
+  const isFirstUserPage = location.pathname === '/signup/first-user';
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,13 +20,41 @@ const Signup: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isCheckingFirstUser, setIsCheckingFirstUser] = useState(true);
   
-  // Redirect to login if no token is provided
+  // Check if this is truly the first user
   useEffect(() => {
-    if (!token) {
+    if (isFirstUserPage) {
+      // Call an API endpoint to check if this is actually the first user
+      const checkFirstUser = async () => {
+        try {
+          const response = await fetch('/api/users/count');
+          const data = await response.json();
+          
+          if (data.count > 0) {
+            // Not actually the first user, redirect to login
+            navigate('/', { state: { error: 'First user already exists.' } });
+          }
+        } catch (err) {
+          console.error('Error checking user count:', err);
+          setError('Failed to check if this is the first user. Please try again.');
+        } finally {
+          setIsCheckingFirstUser(false);
+        }
+      };
+      
+      checkFirstUser();
+    } else {
+      setIsCheckingFirstUser(false);
+    }
+  }, [isFirstUserPage, navigate]);
+  
+  // Redirect to login if no token is provided and not first user
+  useEffect(() => {
+    if (!isFirstUserPage && !token) {
       navigate('/');
     }
-  }, [token, navigate]);
+  }, [token, navigate, isFirstUserPage]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,8 +74,11 @@ const Signup: React.FC = () => {
     setError('');
     
     try {
+      // For the first user, use a special token value
+      const effectiveToken = isFirstUserPage ? 'first-user' : token;
+      
       // Register user with the token
-      await post(`/users/${token}`, {
+      await post(`/users/${effectiveToken}`, {
         username,
         email,
         password,
@@ -51,7 +87,13 @@ const Signup: React.FC = () => {
       });
       
       // Redirect to login page with success message
-      navigate('/', { state: { message: 'Registration successful! You can now log in.' } });
+      navigate('/', { 
+        state: { 
+          message: isFirstUserPage
+            ? 'Admin account created successfully! You can now log in.'
+            : 'Registration successful! You can now log in.'
+        } 
+      });
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create account');
       console.error(err);
@@ -60,11 +102,29 @@ const Signup: React.FC = () => {
     }
   };
   
+  if (isCheckingFirstUser) {
+    return (
+      <div className="py-4 max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Checking System Status</h1>
+        <p className="mb-6">Please wait while we check the system...</p>
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="py-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create Your Account</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        {isFirstUserPage ? 'Create Administrator Account' : 'Create Your Account'}
+      </h1>
       
-      <p className="mb-6">You've been invited to join Bone Social!</p>
+      <p className="mb-6">
+        {isFirstUserPage 
+          ? 'You are creating the first administrator account for this system.' 
+          : 'You\'ve been invited to join Bone Social!'}
+      </p>
       
       {error && (
         <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
@@ -107,6 +167,7 @@ const Signup: React.FC = () => {
             className="border border-gray-500 p-1 w-full font-mono bg-white"
             required
           />
+          <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
         </div>
         
         <div>
@@ -151,6 +212,19 @@ const Signup: React.FC = () => {
           {loading ? 'Creating Account...' : 'Create Account'}
         </Button>
       </form>
+      
+      <div className="mt-6 text-center">
+        <a 
+          href="/" 
+          className="text-blue-700 underline hover:text-blue-900"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/');
+          }}
+        >
+          Return to Login
+        </a>
+      </div>
     </div>
   );
 };

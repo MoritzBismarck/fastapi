@@ -26,6 +26,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Login />} />
               <Route path="/signup/:token" element={<Signup />} />
+              <Route path="/signup/first-user" element={<Signup isFirstUser={true} />} />
               <Route 
                 path="/dashboard" 
                 element={
