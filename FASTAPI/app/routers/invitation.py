@@ -19,15 +19,15 @@ def create_invitation_token(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    # Only users with admin role can create invitation tokens
-    # You may want to implement this role-based check
+    # Convert to dictionary and get values
+    data = token_data.model_dump()
     
     # Create invitation token
     invitation = InvitationService.create_invitation_token(
         db=db,
-        description=token_data.description,
+        description=data["description"],
         created_by=current_user.id,
-        expires_days=token_data.expires_days if token_data.expires_days else 30
+        expires_days=data["expires_days"] if data["expires_days"] is not None else 30
     )
     
     return invitation

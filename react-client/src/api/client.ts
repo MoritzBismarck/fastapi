@@ -3,7 +3,7 @@ import { getStoredToken, removeStoredToken } from '../utils/tokenStorage';
 
 // Create axios instance
 export const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  baseURL: process.env.REACT_APP_API_URL || 'https://bone-social.com/api',
   headers: {
     'Content-Type': 'application/json',
   },

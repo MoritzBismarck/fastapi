@@ -29,8 +29,8 @@ app.include_router(event.router)
 app.include_router(notification.router)
 app.include_router(invitation.router)
 
-@app.get("/")
-def root():
-    return {"Een Websteed ut Beers"}
+# @app.get("/")
+# def root():
+#     return {"Een Websteed ut Beers"}
 
 
