@@ -2,8 +2,13 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getStoredToken, removeStoredToken } from '../utils/tokenStorage';
 
 // Create axios instance
+const API_URL = process.env.REACT_APP_API_URL!;
+if (!API_URL) {
+  throw new Error('REACT_APP_API_URL must be set');
+}
+
 export const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://bone-social.com/api',
+  baseURL: API_URL,             // <-- no fallback here!
   headers: {
     'Content-Type': 'application/json',
   },
