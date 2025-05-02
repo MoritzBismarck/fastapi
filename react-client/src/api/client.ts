@@ -2,13 +2,14 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getStoredToken, removeStoredToken } from '../utils/tokenStorage';
 
 // Create axios instance
-const API_URL = process.env.REACT_APP_API_URL!;
-if (!API_URL) {
-  throw new Error('REACT_APP_API_URL must be set');
+let API_URL = process.env.REACT_APP_API_URL || '';
+
+if (window.location.hostname !== 'localhost' && window.location.protocol === 'https:') {
+  API_URL = API_URL.replace('http:', 'https:');
 }
 
 export const apiClient = axios.create({
-  baseURL: API_URL,             // <-- no fallback here!
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
