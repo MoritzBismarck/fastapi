@@ -14,6 +14,9 @@ interface InvitationToken {
   usage_count: number;
 }
 
+const API_URL = process.env.REACT_APP_API_URL!;
+const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL!;
+
 const InvitationManager: React.FC = () => {
   const [tokens, setTokens] = useState<InvitationToken[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,23 +62,25 @@ const InvitationManager: React.FC = () => {
       setTokens([...tokens, response]);
       setDescription('');
       setError('');
-    } catch (err) {
-      setError('Failed to create invitation token');
-      console.error(err);
+    } catch (err: any) {
+      console.error(err.response?.data || err);
+      setError(
+        err.response?.data?.detail ||
+        JSON.stringify(err.response?.data) ||
+        'Failed to create invitation token'
+      );
     } finally {
       setLoading(false);
     }
   };
   
   // Get QR code URL for a token
-  const getQRCodeUrl = (tokenId: number) => {
-    return `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/invitations/${tokenId}/qrcode`;
-  };
+  const getQRCodeUrl = (tokenId: number) =>
+    `${API_URL}/invitations/${tokenId}/qrcode`;
   
   // Get registration URL that will be encoded in QR
-  const getRegistrationUrl = (token: string) => {
-    return `${process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000'}/signup/${token}`;
-  };
+  const getRegistrationUrl = (token: string) =>
+    `${FRONTEND_URL}/signup/${token}`;
 
   return (
     <div className="font-mono max-w-4xl mx-auto p-4">
