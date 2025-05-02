@@ -9,11 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(root_path="/api") # FastAPI Instance is created allowing us to use the FastAPI methods
+app = FastAPI() # FastAPI Instance is created allowing us to use the FastAPI methods
 
 origins = [
     "https://bone-social.com",
-    "https://www.bone-social.com"  # optional for dev
+    "https://www.bone-social.com",
+    "http://localhost:3000",
 ] # list of origins that are allowed to access the backend
 
 app.add_middleware( #function that runs before the request is processed needed to allow the frontend to access the backend
@@ -32,8 +33,8 @@ app.include_router(event.router)
 app.include_router(notification.router)
 app.include_router(invitation.router)
 
-# @app.get("/")
-# def root():
-#     return {"Een Websteed ut Beers"}
+@app.get("/")
+def root():
+    return {"Een Websteed ut Beers"}
 
 

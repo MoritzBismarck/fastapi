@@ -2,11 +2,11 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getStoredToken, removeStoredToken } from '../utils/tokenStorage';
 
 // Create axios instance
-let API_URL = process.env.REACT_APP_API_URL || '';
+let API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-if (window.location.hostname !== 'localhost' && window.location.protocol === 'https:') {
-  API_URL = API_URL.replace('http:', 'https:');
-}
+// if (window.location.hostname !== 'localhost' && window.location.protocol === 'https:') {
+//   API_URL = API_URL.replace('http:', 'https:');
+// }
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -14,6 +14,14 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// apiClient.interceptors.request.use(config => {
+//   // Ensure URLs have a trailing slash for consistent handling
+//   if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
+//     config.url = `${config.url}/`;
+//   }
+//   return config;
+// });
 
 // Add auth token to requests
 apiClient.interceptors.request.use(
