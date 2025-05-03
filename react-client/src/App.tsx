@@ -20,7 +20,6 @@ import Signup from './pages/Signup';
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <NotificationsProvider>
         <BrowserRouter>
           <div className="font-mono max-w-4xl mx-auto p-4">
             <Routes>
@@ -100,7 +99,6 @@ const App: React.FC = () => {
             </Routes>
           </div>
         </BrowserRouter>
-      </NotificationsProvider>
     </AuthProvider>
   );
 };
