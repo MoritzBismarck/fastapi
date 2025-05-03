@@ -16,7 +16,7 @@ router = APIRouter(
     tags=["events"]
 )
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Event)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.Event)
 def create_event(
     event: schemas.EventCreate, 
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depen
     return {"file_url": file_url}
 
 
-@router.get("/", response_model=List[schemas.Event])
+@router.get("", response_model=List[schemas.Event])
 def get_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),

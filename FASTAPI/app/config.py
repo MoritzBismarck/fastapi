@@ -19,6 +19,6 @@ class Settings(BaseSettings):
     SPACES_SECRET: str
 
     class Config:
-        env_file = "/Users/moritzvonbismarck/Desktop/Bones Social/Learning/FASTAPI/.env"
+        env_file = ".env"
 
 settings = Settings()

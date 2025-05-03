@@ -85,7 +85,7 @@ async def upload_profile_picture(
             detail=f"Failed to upload profile picture: {str(e)}"
         )
 
-@router.get("/", response_model=list[schemas.UserOut])
+@router.get("", response_model=list[schemas.UserOut])
 def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     users = db.query(models.User).all()
     # Optionally, filter out the current user if needed:

@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["notifications"]
 )
 
-@router.get("/", response_model=List[schemas.Notification])
+@router.get("", response_model=List[schemas.Notification])
 def get_notifications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),

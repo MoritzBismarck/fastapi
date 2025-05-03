@@ -10,13 +10,13 @@ router = APIRouter(
     tags=["posts"]
 )
 
-@router.get("/", response_model=list[schemas.Post])
+@router.get("", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(get_db), user_id: int = Depends(oauth2.get_current_user), limit: int = 20, skip: int = 0, search: Optional[str] = ""): # the db parameter is of type Session which is a sqlalchemy session object that is used to interact with the database
     posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
     results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).all()
     return posts
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_post(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)): # the post parameter is of type PostCreate which is a pydantic model that is used to validate the input data
 
     # cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s,%s,%s) RETURNING * """, (post.title, post.content, post.published)) # the %s is a placeholder for the values that are passed in the second argument to sanitize the input so that there is less chance of a sequel injection attack

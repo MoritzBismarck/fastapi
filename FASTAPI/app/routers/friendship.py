@@ -1,4 +1,4 @@
-# Create a new file: FASTAPI/app/routers/friendship.py
+# FASTAPI/app/routers/friendship.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session

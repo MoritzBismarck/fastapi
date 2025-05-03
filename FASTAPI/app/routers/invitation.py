@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["invitations"]
 )
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.InvitationTokenOut)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.InvitationTokenOut)
 def create_invitation_token(
     token_data: schemas.InvitationTokenCreate,
     db: Session = Depends(get_db),
@@ -67,7 +67,7 @@ def get_invitation_qrcode(
 
 
 # Add to FASTAPI/app/routers/invitation.py
-@router.get("/", response_model=List[schemas.InvitationTokenOut])
+@router.get("", response_model=List[schemas.InvitationTokenOut])
 def get_invitation_tokens(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
