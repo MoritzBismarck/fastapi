@@ -100,8 +100,8 @@ const NotificationBell: React.FC = () => {
   // Toggle notification panel
   const toggleNotifications = () => {
     setIsOpen(!isOpen);
-    if (!isOpen) {
-      fetchNotifications();
+    if (!isOpen && notifications.length === 0) {
+      fetchNotifications(); // Fetch notifications only when the panel is opened for the first time
     }
   };
 
@@ -122,11 +122,6 @@ const NotificationBell: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
-
-  // Fetch notifications on mount
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   return (
     <div className="relative">
