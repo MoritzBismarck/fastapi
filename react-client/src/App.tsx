@@ -65,7 +65,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route 
+              <Route
                 path="/events/create" 
                 element={
                   <ProtectedRoute>

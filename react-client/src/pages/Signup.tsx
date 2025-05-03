@@ -24,25 +24,24 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   
   // Check if this is truly the first user
   useEffect(() => {
-    if (isFirstUserPage) {
-      // Call an API endpoint to check if this is actually the first user
-      const checkFirstUser = async () => {
-        try {
-          const response = await fetch('/api/users/count');
-          const data = await response.json();
-          
-          if (data.count > 0) {
-            // Not actually the first user, redirect to login
-            navigate('/', { state: { error: 'First user already exists.' } });
-          }
-        } catch (err) {
-          console.error('Error checking user count:', err);
-          setError('Failed to check if this is the first user. Please try again.');
-        } finally {
-          setIsCheckingFirstUser(false);
+    const checkFirstUser = async () => {
+      try {
+        const response = await fetch('/api/users/count');
+        const data = await response.json();
+
+        if (data.count > 0 && isFirstUserPage) {
+          // Redirect to login if the first user already exists
+          navigate('/', { state: { error: 'First user already exists. Please log in.' } });
         }
-      };
-      
+      } catch (err) {
+        console.error('Error checking user count:', err);
+        setError('Failed to check if this is the first user. Please try again.');
+      } finally {
+        setIsCheckingFirstUser(false);
+      }
+    };
+
+    if (isFirstUserPage) {
       checkFirstUser();
     } else {
       setIsCheckingFirstUser(false);
@@ -52,7 +51,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   // Redirect to login if no token is provided and not first user
   useEffect(() => {
     if (!isFirstUserPage && !token) {
-      navigate('/');
+      navigate('/', { state: { error: 'Invalid or missing invitation token.' } });
     }
   }, [token, navigate, isFirstUserPage]);
   

@@ -24,6 +24,7 @@ const InvitationManager: React.FC = () => {
   const [expiresDays, setExpiresDays] = useState(30);
   const [error, setError] = useState('');
   const [selectedToken, setSelectedToken] = useState<number | null>(null);
+  const [qrCodeUrls, setQrCodeUrls] = useState<{ [key: number]: string }>({});
   
   // Fetch existing tokens
   const fetchTokens = async () => {
@@ -37,6 +38,26 @@ const InvitationManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchQRCode = async (tokenId: number): Promise<string> => {
+    const token = localStorage.getItem('authToken'); // Retrieve the token from storage
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_URL}/invitations/${tokenId}/qrcode`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch QR code');
+    }
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob); // Create an object URL for the blob
   };
   
   useEffect(() => {
@@ -74,13 +95,22 @@ const InvitationManager: React.FC = () => {
     }
   };
   
-  // Get QR code URL for a token
-  const getQRCodeUrl = (tokenId: number) =>
-    `${API_URL}/invitations/${tokenId}/qrcode`;
-  
   // Get registration URL that will be encoded in QR
   const getRegistrationUrl = (token: string) =>
     `${FRONTEND_URL}/signup/${token}`;
+
+  const handleShowQRCode = async (tokenId: number) => {
+    if (!qrCodeUrls[tokenId]) {
+      try {
+        const qrCodeUrl = await fetchQRCode(tokenId);
+        setQrCodeUrls((prev) => ({ ...prev, [tokenId]: qrCodeUrl }));
+      } catch (err) {
+        console.error(err);
+        setError('Failed to fetch QR code');
+      }
+    }
+    setSelectedToken(selectedToken === tokenId ? null : tokenId);
+  };
 
   return (
     <div className="font-mono max-w-4xl mx-auto p-4">
@@ -150,7 +180,7 @@ const InvitationManager: React.FC = () => {
                     <p className="text-sm text-gray-600">Uses: {token.usage_count}</p>
                   </div>
                   <Button 
-                    onClick={() => setSelectedToken(selectedToken === token.id ? null : token.id)}
+                    onClick={() => handleShowQRCode(token.id)}
                     size="sm"
                   >
                     {selectedToken === token.id ? 'Hide QR Code' : 'Show QR Code'}
@@ -166,7 +196,7 @@ const InvitationManager: React.FC = () => {
                       </span>
                     </p>
                     <img 
-                      src={getQRCodeUrl(token.id)} 
+                      src={qrCodeUrls[token.id]} // Use the fetched QR code URL
                       alt={`QR Code for ${token.description}`}
                       className="border border-gray-300 p-2 bg-white"
                     />
