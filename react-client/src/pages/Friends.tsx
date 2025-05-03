@@ -107,11 +107,11 @@ const Friends: React.FC = () => {
       case 'none': 
         return 'Like';
       case 'request_sent': 
-        return 'Mog ni mehr';
+        return 'Request Sent';
       case 'request_received': 
-        return 'Like';
+        return 'Accept Request';
       case 'friends': 
-        return 'Mog ni mehr';
+        return 'Friends';
       default: 
         return 'Add Friend';
     }

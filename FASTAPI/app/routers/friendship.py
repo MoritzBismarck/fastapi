@@ -46,24 +46,24 @@ def create_friendship_request(
             )
         )
     ).first()
-    
-    if existing_friendship:
+
+    if existing_friendship and existing_friendship.status == "pending":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A friendship request already exists between these users"
         )
-    
+
     # Create the friendship request
     new_friendship = models.Friendship(
         requester_id=current_user.id,
         addressee_id=friendship.addressee_id,
         status="pending"
     )
-    
+
     db.add(new_friendship)
     db.commit()
     db.refresh(new_friendship)
-    
+
     return new_friendship
 
 @router.put("/{id}", response_model=schemas.FriendshipOut)
