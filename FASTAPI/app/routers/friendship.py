@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["friendships"]
 )
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.FriendshipOut)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.FriendshipOut)
 def create_friendship_request(
     friendship: schemas.FriendshipCreate, 
     db: Session = Depends(get_db),
@@ -112,7 +112,7 @@ def update_friendship_status(
     
     return friendship_query.first()
 
-@router.get("/", response_model=List[schemas.FriendshipWithDetails])
+@router.get("", response_model=List[schemas.FriendshipWithDetails])
 def get_user_friendships(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
