@@ -19,14 +19,14 @@ const Dashboard: React.FC = () => {
       
       <div className="mb-12">
         <Link to="/events" className="text-xl text-blue-700 underline font-bold">
-          Event Matcher
+          Events
         </Link>
         <p className="ml-8 mt-2">Find and join events with your friends</p>
       </div>
       
       <div className="mb-12">
         <Link to="/friends" className="text-xl text-blue-700 underline font-bold">
-          Friend Finder
+          Friends
         </Link>
         <p className="ml-8 mt-2">Find and connect with friends</p>
       </div>
