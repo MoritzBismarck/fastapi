@@ -1,3 +1,4 @@
+// Modify your EventsHeader.tsx to maintain layout consistency
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 
@@ -33,15 +34,17 @@ const EventsHeader: React.FC<EventsHeaderProps> = ({ isCreating = false, onToggl
         </NavLink>
       </div>
 
-      {/* Create button on the right */}
-      {onToggleCreate && (
-        <button
-          onClick={onToggleCreate}
-          className="w-1/3 text-right text-blue-700 underline hover:text-blue-900"
-        >
-          {isCreating ? 'Cancel Creation' : 'Create Event'}
-        </button>
-      )}
+      {/* Create button or empty spacer on the right */}
+      <div className="w-1/3 text-right">
+        {onToggleCreate && (
+          <button
+            onClick={onToggleCreate}
+            className="text-blue-700 underline hover:text-blue-900"
+          >
+            {isCreating ? 'Cancel Creation' : 'Create Event'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

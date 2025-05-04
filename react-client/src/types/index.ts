@@ -29,8 +29,7 @@ export interface User {
     start_time?: string;
     end_time?: string;
     all_day: boolean;
-    venue_name?: string;
-    address?: string;
+    place: string;
     image_url?: string;
     created_at: string;
   }

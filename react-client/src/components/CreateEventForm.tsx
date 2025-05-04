@@ -96,7 +96,7 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
   };
 
   return (
-    <div className="bg-white border border-gray-300 p-6 rounded-lg">
+    <div className="border-4 border-black rounded-none p-6 max-w-md w-full mx-auto bg-white shadow-none flex flex-col">
       <h2 className="text-xl font-bold mb-4">Create New Event</h2>
       
       {/* Cover upload */}

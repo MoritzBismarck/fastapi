@@ -68,9 +68,9 @@ const EventCard: React.FC<EventCardProps> = ({
         <h2 className="text-xl font-bold uppercase tracking-wide">
           {event.title}
         </h2>
-        {event.venue_name && (
+        {event.place && (
           <div className="text-sm font-mono bg-black text-white px-2 py-1">
-            {event.venue_name}
+            {event.place}
           </div>
         )}
       </div>
@@ -113,12 +113,6 @@ const EventCard: React.FC<EventCardProps> = ({
             <div className="text-sm font-bold mb-1">Description:</div>
             <p className="whitespace-pre-line">{event.description}</p>
           </div>
-          {event.address && (
-            <div className="mb-4 font-sans">
-              <div className="text-sm font-bold mb-1">Address:</div>
-              <div>{event.address}</div>
-            </div>
-          )}
         </>
       )}
 
