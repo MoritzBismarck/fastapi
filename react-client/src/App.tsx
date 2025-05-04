@@ -11,7 +11,7 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Events from './pages/Events';
 import LikedEvents from './pages/LikedEvents';
-import CreateEvent from './pages/CreateEvent';
+// import CreateEvent from './pages/CreateEvent';
 import EventDetail from './pages/EventDetail'; // We'll create this next
 import DesignTest from './pages/DesignTest';
 import InvitationManager from './pages/InvitationManager';
@@ -56,6 +56,14 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/events/create" 
+                element={
+                  <ProtectedRoute>
+                    <Events initialCreating={true} />
+                  </ProtectedRoute>
+                }
+              />
               <Route 
                 path="/events/liked" 
                 element={
@@ -64,14 +72,14 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route
+              {/* <Route
                 path="/events/create" 
                 element={
                   <ProtectedRoute>
                     <CreateEvent />
                   </ProtectedRoute>
                 }
-              />
+              /> */}
               <Route 
                 path="/events/:id" 
                 element={

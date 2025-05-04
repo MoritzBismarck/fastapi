@@ -1,17 +1,25 @@
-// react-client/src/pages/Events.tsx
+// Modified Events.tsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import EventCard from '../components/EventCard'
 import { Event } from '../types'
 import { getEvents, likeEvent } from '../api/eventsApi'
+import CreateEventForm from '../components/CreateEventForm' // We'll create this component
+import EventsHeader from '../components/EventsHeader'
 
-const Events: React.FC = () => {
+interface EventsProps {
+  initialCreating?: boolean;
+}
+
+
+const Events: React.FC<EventsProps> = ({ initialCreating = false }) => {
   const [events, setEvents] = useState<Event[]>([])
   const [currentEventIndex, setCurrentEventIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [noMoreEvents, setNoMoreEvents] = useState(false)
+  const [isCreatingEvent, setIsCreatingEvent] = useState(initialCreating) // New state for toggling creation mode
 
   const navigate = useNavigate()
 
@@ -62,6 +70,17 @@ const Events: React.FC = () => {
     }
   }
 
+  // Toggle between event viewing and creation modes
+  const toggleEventCreation = () => {
+    setIsCreatingEvent(!isCreatingEvent)
+  }
+
+  // Handler for when event creation is successful
+  const handleEventCreated = () => {
+    setIsCreatingEvent(false) // Exit creation mode
+    fetchEvents() // Refresh events to include the new one
+  }
+
   useEffect(() => {
     fetchEvents()
   }, [])
@@ -70,33 +89,15 @@ const Events: React.FC = () => {
     <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
 
-      {/* title + links in one row */}
-      <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Event Matcher</h1>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/events/liked')}
-            className="text-blue-700 underline hover:text-blue-900"
-          >
-            View My Liked Events
-          </button>
-          <span className="text-gray-400 select-none">|</span>
-          <button
-            onClick={() => navigate('/events/create')}
-            className="text-blue-700 underline hover:text-blue-900"
-          >
-            Create New Event
-          </button>
-        </div>
-      </div>
+      <EventsHeader
+        isCreating={isCreatingEvent}
+        onToggleCreate={toggleEventCreation}
+      />
 
-      {errorMessage && (
-        <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
-          {errorMessage}
-        </div>
-      )}
-
-      {isLoading ? (
+      {/* Conditional rendering based on mode */}
+      {isCreatingEvent ? (
+        <CreateEventForm onEventCreated={handleEventCreated} onCancel={toggleEventCreation} />
+      ) : isLoading ? (
         <div className="p-4 border border-gray-300 text-center">
           Loading events...
         </div>

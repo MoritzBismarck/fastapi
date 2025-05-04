@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import EventCard from '../components/EventCard';
 import { Event } from '../types';
 import { getLikedEvents, unlikeEvent } from '../api/eventsApi';
+import EventsHeader from '../components/EventsHeader'
 
 const LikedEvents: React.FC = () => {
   // State for liked events
@@ -51,24 +52,9 @@ const LikedEvents: React.FC = () => {
     <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
       
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Liked Events</h1>
-        <div>
-          <button 
-            onClick={() => navigate('/events')}
-            className="text-blue-700 underline hover:text-blue-900 mr-4"
-          >
-            Back to Events
-          </button>
-          
-          <button 
-            onClick={() => navigate('/events/create')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Create New Event
-          </button>
-        </div>
-      </div>
+      <EventsHeader
+        // no creation toggle in this view, so just omit onToggleCreate
+      />
       
       {errorMessage && (
         <div className="border border-red-500 p-4 mb-6 text-red-700 bg-red-100 rounded">
