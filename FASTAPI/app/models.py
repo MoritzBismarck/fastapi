@@ -2,6 +2,7 @@ from .database import Base
 from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.sqltypes import Date, Time
 
 class Post(Base):
     __tablename__ = "posts"
@@ -81,17 +82,23 @@ class Event(Base):
     
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False)
-    description = Column(String, nullable=False)
-    start_date = Column(TIMESTAMP(timezone=True), nullable=False)
-    end_date = Column(TIMESTAMP(timezone=True), nullable=True)  # Nullable for single-day events
-    start_time = Column(String, nullable=True)  # Store time as string for flexibility
-    end_time = Column(String, nullable=True)    # Nullable for events with just a start time
-    all_day = Column(Boolean, default=False)    # Flag for all-day events
-    venue_name = Column(String, nullable=True)
-    address = Column(String, nullable=True)
-    image_url = Column(String, nullable=True)  # Add this line
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    description = Column(String, nullable=False)  # Changed from 'details'
     
+    # Date and Time fields
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)  # Optional for single-day events
+    start_time = Column(String, nullable=True)  # Keep as String for "14:00" format
+    end_time = Column(String, nullable=True)  # Keep as String for "14:00" format
+    
+    place = Column(String, nullable=False)
+    
+    image_url = Column(String, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    # Relationships
+    creator = relationship("User", backref="created_events")
+
 class EventLike(Base):
     __tablename__ = "event_likes"
     
@@ -122,6 +129,5 @@ class Notification(Base):
     user = relationship("User")
 
 
-    
 
-    
+

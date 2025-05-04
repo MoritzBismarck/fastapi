@@ -2,362 +2,215 @@
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import Header from '../components/Header';
-import { post } from '../api/client';
-import axios from 'axios';
+import { post, apiClient } from '../api/client';
 import { getStoredToken } from '../utils/tokenStorage';
 
-interface EventFormData {
+type FormData = {
   title: string;
   description: string;
   start_date: string;
-  end_date?: string;  // Optional for single-day events
   start_time?: string;
+  end_date?: string;
   end_time?: string;
-  all_day: boolean;
-  venue_name?: string;
-  address?: string;
-}
+  place: string;
+  cover?: FileList;
+};
 
 const CreateEvent: React.FC = () => {
-  const { control, register, handleSubmit, reset, watch, formState: { errors } } = useForm<EventFormData>({
-    defaultValues: {
-      all_day: false
-    }
-  });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors }
+  } = useForm<FormData>();
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [showEnd, setShowEnd] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const watchAllDay = watch('all_day');
-  
-  // Handle image selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedImage(file);
-      
-      // Create a preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Cover-Vorschau
+  const onCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setValue('cover', files);
+    setCoverPreview(URL.createObjectURL(files[0]));
   };
-  
-  // Clear image selection
-  const clearImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-  };
-  
-  // Handle form submission
-  const onSubmit = async (data: EventFormData) => {
-    setIsSubmitting(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-    
+
+  const onSubmit = async (data: FormData) => {
+    setLoading(true);
     try {
-      // Format dates for API
-      const formattedStartDate = new Date(data.start_date).toISOString();
-      let formattedEndDate = data.end_date ? new Date(data.end_date).toISOString() : null;
-      
-      // If no end date is provided, use start date
-      if (!formattedEndDate && !data.all_day) {
-        formattedEndDate = formattedStartDate;
-      }
-      
-      // Step 1: Create the event
-      const eventResponse = await post<{ id: string }>('/events', {
-        title: data.title,
-        description: data.description,
-        start_date: formattedStartDate,
-        end_date: formattedEndDate,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        all_day: data.all_day,
-        venue_name: data.venue_name,
-        address: data.address
-      });
-      
-      // Step 2: If we have an image, upload it to the event
-      if (selectedImage && eventResponse.id) {
-        const formData = new FormData();
-        formData.append('file', selectedImage);
-        
-        const token = getStoredToken();
-        await axios.post(
-          `http://127.0.0.1:8000/events/${eventResponse.id}/image`, 
-          formData, 
+      // 1) Cover hochladen
+      let image_url = '';
+      if (data.cover && data.cover.length) {
+        const form = new FormData();
+        form.append('file', data.cover[0]);
+        const resp = await apiClient.post<{ file_url: string }>(
+          '/events/upload/',
+          form,
           {
             headers: {
               'Content-Type': 'multipart/form-data',
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${getStoredToken()}`,
+            },
           }
         );
+        image_url = resp.data.file_url;
       }
-      
-      // Show success message
-      setSuccessMessage('Event created successfully!');
-      
-      // Reset form for next event
-      reset({
-        title: '',
-        description: '',
-        start_date: '',
-        end_date: '',
-        start_time: '',
-        end_time: '',
-        all_day: false,
-        venue_name: '',
-        address: ''
-      });
-      clearImage();
-      
-    } catch (error) {
-      console.error('Error creating event:', error);
-      setErrorMessage('Failed to create event. Please try again.');
+
+      // 2) Payload zusammenbauen
+      const payload = {
+        title:       data.title,
+        description: data.description,
+        start_date:  data.start_date,
+        start_time:  data.start_time,
+        end_date:    showEnd ? data.end_date : undefined,
+        end_time:    showEnd ? data.end_time : undefined,
+        place:       data.place,
+        image_url,
+      };
+
+      // 3) Event anlegen
+      await post('/events', payload);
+
+      alert('✔️ Veranstaltung erstellt!');
+      navigate('/events');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Konnte Veranstaltung nicht erstellen.');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
-  
-  // Format date for the input
-  const formatDateForInput = () => {
-    const now = new Date();
-    return now.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+
+  // Hilfsfunktion: formatiert Eingabe “HHMM” → “HH:MM”
+  const formatTimeInput = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return digits.slice(0, 2) + ':' + digits.slice(2);
   };
 
   return (
-    <div className="font-mono max-w-4xl mx-auto p-4">
-      <Header />
-      
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Create New Event</h1>
-        <p className="text-gray-600">Fill in the details below to create a new event.</p>
+    <div className="max-w-md mx-auto bg-gray-900 text-white p-4 space-y-6 rounded-lg">
+      {/* Cover-Upload */}
+      <div className="relative h-36 bg-gray-800 rounded overflow-hidden">
+        {coverPreview
+          ? <img src={coverPreview} className="object-cover w-full h-full" />
+          : <div className="flex items-center justify-center h-full text-gray-500">
+              + Foto/Video hinzufügen
+            </div>
+        }
+        <input
+          type="file"
+          accept="image/*"
+          onChange={onCoverChange}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+        />
       </div>
-      
-      {/* Success Message */}
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {successMessage}
-        </div>
-      )}
-      
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {errorMessage}
-        </div>
-      )}
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Event Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-            Event Title *
-          </label>
-          <input
-            id="title"
-            type="text"
-            {...register('title', { required: 'Title is required' })}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          />
-          {errors.title && (
-            <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
-          )}
-        </div>
-        
-        {/* Event Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            Description *
-          </label>
-          <textarea
-            id="description"
-            rows={4}
-            {...register('description', { required: 'Description is required' })}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          />
-          {errors.description && (
-            <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
-          )}
-        </div>
 
-        {/* All-day Event Checkbox */}
-        <div className="flex items-center">
+      {/* Formular */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Titel */}
+        <input
+          type="text"
+          placeholder="Name der Veranstaltung"
+          {...register('title', { required: true })}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+        />
+        {errors.title && <p className="text-red-500 text-xs">Pflichtfeld</p>}
+
+        {/* Datum & Zeit */}
+        <div className="flex space-x-2 items-center">
           <input
-            id="all_day"
-            type="checkbox"
-            {...register('all_day')}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            type="date"
+            defaultValue={today}
+            {...register('start_date', { required: true })}
+            className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2"
           />
-          <label htmlFor="all_day" className="ml-2 block text-sm text-gray-700">
-            All-day event
-          </label>
-        </div>
-        
-        {/* Event Date & Time Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Start Date */}
-          <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
-              Start Date *
-            </label>
-            <input
-              id="start_date"
-              type="date"
-              defaultValue={formatDateForInput()}
-              {...register('start_date', { required: 'Start date is required' })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            />
-            {errors.start_date && (
-              <p className="text-red-500 text-sm mt-1">{errors.start_date.message}</p>
+          <Controller
+            name="start_time"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <input
+                type="text"
+                placeholder="HH:MM"
+                maxLength={5}
+                {...field}
+                onChange={e => field.onChange(formatTimeInput(e.target.value))}
+                className="w-24 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-center"
+              />
             )}
-          </div>
-          
-          {/* End Date (optional) */}
-          <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
-              End Date
-            </label>
-            <input
-              id="end_date"
-              type="date"
-              {...register('end_date')}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            />
-          </div>
-          
-          {/* Show time fields only if not an all-day event */}
-          {!watchAllDay && (
-            <>
-              {/* Start Time */}
-              <div>
-                <label htmlFor="start_time" className="block text-sm font-medium text-gray-700">
-                  Start Time
-                </label>
-                <input
-                  id="start_time"
-                  type="time"
-                  {...register('start_time')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                />
-              </div>
-              
-              {/* End Time */}
-              <div>
-                <label htmlFor="end_time" className="block text-sm font-medium text-gray-700">
-                  End Time
-                </label>
-                <input
-                  id="end_time"
-                  type="time"
-                  {...register('end_time')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                />
-              </div>
-            </>
-          )}
+          />
         </div>
-        
-        {/* Event Location Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Venue Name */}
-          <div>
-            <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700">
-              Venue Name
-            </label>
-            <input
-              id="venue_name"
-              type="text"
-              {...register('venue_name')}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            />
-          </div>
-          
-          {/* Address */}
-          <div>
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-              Address
-            </label>
-            <input
-              id="address"
-              type="text"
-              {...register('address')}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            />
-          </div>
-        </div>
-        
-        {/* Event Image */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Event Image
-          </label>
-          <div className="mt-1 flex items-center">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-              id="event-image"
-            />
-            <label 
-              htmlFor="event-image"
-              className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+        {errors.start_date && <p className="text-red-500 text-xs">Pflichtfeld</p>}
+
+        {/* Enddatum/Uhrzeit */}
+        {!showEnd
+          ? <button
+              type="button"
+              onClick={() => setShowEnd(true)}
+              className="text-blue-500 text-sm"
             >
-              {selectedImage ? 'Change Image' : 'Select Image'}
-            </label>
-            {imagePreview && (
-              <button
-                type="button"
-                onClick={clearImage}
-                className="ml-2 text-red-600 hover:text-red-800"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          
-          {/* Image Preview */}
-          {imagePreview && (
-            <div className="mt-2">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="h-48 w-auto object-cover rounded-md" 
+              + Enddatum und Uhrzeit
+            </button>
+          : (
+            <div className="flex space-x-2 items-center">
+              <input
+                type="date"
+                {...register('end_date')}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <Controller
+                name="end_time"
+                control={control}
+                defaultValue=""
+                render={({ field }) => (
+                  <input
+                    type="text"
+                    placeholder="HH:MM"
+                    maxLength={5}
+                    {...field}
+                    onChange={e => field.onChange(formatTimeInput(e.target.value))}
+                    className="w-24 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-center"
+                  />
+                )}
               />
             </div>
-          )}
-        </div>
-        
-        {/* Submit Button */}
-        <div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Creating Event...' : 'Create Event'}
-          </button>
-        </div>
-      </form>
-      
-      {/* Back to Events button */}
-      <div className="mt-6">
+          )
+        }
+
+        {/* Ort */}
+        <input
+          type="text"
+          placeholder="Ort hinzufügen"
+          {...register('place', { required: true })}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+        />
+        {errors.place && <p className="text-red-500 text-xs">Pflichtfeld</p>}
+
+        {/* Details */}
+        <textarea
+          placeholder="Was sind die Details?"
+          {...register('description')}
+          rows={4}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 resize-none"
+        />
+
+        {/* Absenden */}
         <button
-          onClick={() => navigate('/events')}
-          className="text-blue-600 hover:text-blue-800 underline"
+          type="submit"
+          disabled={loading}
+          className={`w-full py-2 rounded ${
+            loading ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          Back to Events
+          {loading ? 'Erstelle…' : 'Veranstaltung erstellen'}
         </button>
-      </div>
+      </form>
     </div>
   );
 };

@@ -116,14 +116,8 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   return (
     <div className="py-4 max-w-md mx-auto">
       <h1 className="text-2xl font-bold mb-4">
-        {isFirstUserPage ? 'Create Administrator Account' : 'Create Your Account'}
+        {isFirstUserPage ? 'Create Administrator Account' : 'You have been invited 🎉'}
       </h1>
-      
-      <p className="mb-6">
-        {isFirstUserPage 
-          ? 'You are creating the first administrator account for this system.' 
-          : 'You\'ve been invited to join Bone Social!'}
-      </p>
       
       {error && (
         <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">

@@ -5,7 +5,10 @@ __pycache__/
 *.so
 .Python
 FASTAPI/venv/
+context
 .process.env
+.context
+featurestoadd
 
 # Node/Svelte
 CLIENT/node_modules/

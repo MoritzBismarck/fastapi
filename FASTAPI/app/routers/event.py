@@ -16,20 +16,21 @@ router = APIRouter(
     tags=["events"]
 )
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.Event)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.EventResponse)
 def create_event(
-    event: schemas.EventCreate, 
+    event: schemas.EventCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
+
     # Create a new event with the provided data
-    new_event = models.Event(**event.model_dump())
+    new_event = models.Event(**event.model_dump(), created_by=current_user.id)
     db.add(new_event)
     db.commit()
     db.refresh(new_event)
     return new_event
 
-@router.post("/{event_id}/image", status_code=status.HTTP_200_OK, response_model=schemas.Event)
+@router.post("/{event_id}/image", status_code=status.HTTP_200_OK, response_model=schemas.EventResponse)
 async def upload_event_image(
     event_id: int,
     file: UploadFile = File(...),
@@ -103,7 +104,7 @@ async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depen
     return {"file_url": file_url}
 
 
-@router.get("", response_model=List[schemas.Event])
+@router.get("", response_model=List[schemas.EventResponse])
 def get_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -142,7 +143,7 @@ def get_events(
     
     return events
 
-@router.get("/liked", response_model=List[schemas.Event])
+@router.get("/liked", response_model=List[schemas.EventResponse])
 def get_liked_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -235,8 +236,7 @@ def get_event_detail(
         "start_time": event.start_time,
         "end_time": event.end_time,
         "all_day": event.all_day,
-        "venue_name": event.venue_name,
-        "address": event.address,
+        "place": event.place,
         "image_url": event.image_url,
         "created_at": event.created_at,
         "liked_by_current_user": user_liked,
@@ -245,7 +245,7 @@ def get_event_detail(
     
     return event_data
 
-@router.get("/{id}", response_model=schemas.Event)
+@router.get("/{id}", response_model=schemas.EventResponse)
 def get_event(
     id: int,
     db: Session = Depends(get_db),

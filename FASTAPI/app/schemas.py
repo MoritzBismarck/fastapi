@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime
+from datetime import datetime, date, time
 from typing import List, Optional, Annotated
 
 # My pydantic models
@@ -32,23 +32,23 @@ class UserProfileUpdate(BaseModel):
     last_name: Optional[str] = None
     username: Optional[str] = None
 
-class PostBase(BaseModel):
-    title: str
-    content: str
-    published: bool = True
+# class PostBase(BaseModel):
+#     title: str
+#     content: str
+#     published: bool = True
 
-class Post(PostBase): # inherits from PostBase
-    id: int
-    created_at: datetime
-    owner_id: int
-    owner: UserOut
+# class Post(PostBase): # inherits from PostBase
+#     id: int
+#     created_at: datetime
+#     owner_id: int
+#     owner: UserOut
 
-class PostOut(PostBase):
-    Post: Post
-    votes: int
+# class PostOut(PostBase):
+#     Post: Post
+#     votes: int
 
-class PostCreate(PostBase): # inherits from PostBase
-    pass
+# class PostCreate(PostBase): # inherits from PostBase
+#     pass
 
 class Token(BaseModel):
     access_token: str
@@ -118,22 +118,21 @@ class FriendsOverview(BaseModel):
 class EventBase(BaseModel):
     title: str
     description: str
-    start_date: datetime
-    end_date: Optional[datetime] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    all_day: bool = False
-    venue_name: Optional[str] = None
-    address: Optional[str] = None
-    image_url: Optional[str] = None
+    start_date: date  # Keep as date type for validation
+    start_time: Optional[str] = None  # Change to str to match db model
+    end_date: Optional[date] = None
+    end_time: Optional[str] = None  # Change to str to match db model
+    place: str  # Changed to match your column name
+    image_url: str  # Match nullable=False in your model
 
 class EventCreate(EventBase):
     pass
 
-class Event(EventBase):
+class EventResponse(EventBase):
     id: int
+    created_by: int
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -146,7 +145,7 @@ class EventLike(BaseModel):
     class Config:
         orm_mode = True
 
-class EventWithLikedUsers(Event):
+class EventWithLikedUsers(EventResponse):
     liked_by_current_user: bool = False
     liked_by_friends: List[UserOut] = []
     
