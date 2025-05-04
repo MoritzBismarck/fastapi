@@ -97,6 +97,7 @@ class UserOverview(BaseModel):
     id: int
     username: str
     email: EmailStr
+    profile_picture: Optional[str] = None  # Include profile picture
     relationship: str  # "none", "friends", "request_sent", "request_received"
     liked: bool
     friendshipId: Optional[int] = None

@@ -50,9 +50,7 @@ const LikedEvents: React.FC = () => {
 
   return (
     <div className="font-mono max-w-4xl mx-auto p-4">
-      <Header />
-      
-      <EventsHeader
+      <Header /><EventsHeader
         // no creation toggle in this view, so just omit onToggleCreate
       />
       

@@ -157,6 +157,7 @@ def get_users_overview(
             "id": user.id,
             "username": user.username,
             "email": user.email,
+            "profile_picture": user.profile_picture,
             "relationship": relationship_state,
             "friendshipId": friendship.id if friendship else None,
             "liked": bool(sent_friendship and sent_friendship.status == "pending"),

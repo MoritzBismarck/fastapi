@@ -107,9 +107,9 @@ const Friends: React.FC = () => {
       case 'none': 
         return 'Like';
       case 'request_sent': 
-        return 'Request Sent';
+        return 'Mog i ni mehr';
       case 'request_received': 
-        return 'Accept Request';
+        return 'Like';
       case 'friends': 
         return 'Friends';
       default: 
@@ -170,6 +170,10 @@ const Friends: React.FC = () => {
                             src={user.profile_picture} 
                             alt={user.username}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null; // Prevent infinite loop
+                              e.currentTarget.src = ''; // Fallback to empty string
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
