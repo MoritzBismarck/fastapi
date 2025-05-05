@@ -32,6 +32,7 @@ export interface User {
     place: string;
     image_url?: string;
     created_at: string;
+    liked_by_friends?: User[];
   }
   
   export interface Notification {

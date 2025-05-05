@@ -180,10 +180,9 @@ def get_event_detail(
         )
     
     # Get IDs of the user's friends
-    # First, get all accepted friendships where current user is either requester or addressee
     friend_ids = []
     
-    # Find friendships where user is requester
+    # Get friendships where user is requester
     requester_friendships = db.query(models.Friendship).filter(
         and_(
             models.Friendship.requester_id == current_user.id,
@@ -192,10 +191,9 @@ def get_event_detail(
     ).all()
     
     # Add addressee IDs to friend_ids
-    for friendship in requester_friendships:
-        friend_ids.append(friendship.addressee_id)
+    friend_ids.extend([f.addressee_id for f in requester_friendships])
     
-    # Find friendships where user is addressee
+    # Get friendships where user is addressee
     addressee_friendships = db.query(models.Friendship).filter(
         and_(
             models.Friendship.addressee_id == current_user.id,
@@ -204,8 +202,7 @@ def get_event_detail(
     ).all()
     
     # Add requester IDs to friend_ids
-    for friendship in addressee_friendships:
-        friend_ids.append(friendship.requester_id)
+    friend_ids.extend([f.requester_id for f in addressee_friendships])
     
     # Get users who have liked this event and are friends with current user
     friends_who_liked = db.query(models.User).join(
@@ -226,8 +223,8 @@ def get_event_detail(
         )
     ).first() is not None
     
-    # Combine the data
-    event_data = {
+    # First convert SQLAlchemy model to dict
+    event_dict = {
         "id": event.id,
         "title": event.title,
         "description": event.description,
@@ -235,15 +232,16 @@ def get_event_detail(
         "end_date": event.end_date,
         "start_time": event.start_time,
         "end_time": event.end_time,
-        "all_day": event.all_day,
+        "all_day": getattr(event, "all_day", None),  # Use getattr for fields that might not exist
         "place": event.place,
         "image_url": event.image_url,
         "created_at": event.created_at,
+        "created_by": event.created_by,
         "liked_by_current_user": user_liked,
         "liked_by_friends": friends_who_liked
     }
     
-    return event_data
+    return event_dict
 
 @router.get("/{id}", response_model=schemas.EventResponse)
 def get_event(

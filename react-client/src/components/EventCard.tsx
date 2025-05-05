@@ -1,13 +1,13 @@
-// react-client/src/components/EventCard.tsx
-import React, { useState } from 'react'
-import { Event } from '../types'
+import React, { useState, useEffect } from 'react';
+import { Event, User } from '../types';
+import { apiClient } from '../api/client'; // Import your centralized API client
 
 interface EventCardProps {
-  event: Event
-  onLike?: () => void
-  onSkip?: () => void
-  onUnlike?: () => void
-  showActionButtons?: boolean
+  event: Event;
+  onLike?: () => void;
+  onSkip?: () => void;
+  onUnlike?: () => void;
+  showActionButtons?: boolean;
 }
 
 const EventCard: React.FC<EventCardProps> = ({
@@ -17,38 +17,52 @@ const EventCard: React.FC<EventCardProps> = ({
   onUnlike,
   showActionButtons = true,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [likedByFriends, setLikedByFriends] = useState<User[] | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Fetch liked_by_friends data using apiClient
+  useEffect(() => {
+    const fetchLikedByFriends = async () => {
+      try {
+        const response = await apiClient.get(`/events/${event.id}/detail`);
+        setLikedByFriends(response.data.liked_by_friends);
+      } catch (error) {
+        console.error('Error fetching liked_by_friends:', error);
+      }
+    };
+
+    fetchLikedByFriends();
+  }, [event.id]);
 
   const formatDateRange = () => {
-    const start = new Date(event.start_date)
-    const end = event.end_date ? new Date(event.end_date) : null
+    const start = new Date(event.start_date);
+    const end = event.end_date ? new Date(event.end_date) : null;
     const opts: Intl.DateTimeFormatOptions = {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
-    }
-    let s = start.toLocaleDateString('en-US', opts)
+    };
+    let s = start.toLocaleDateString('en-US', opts);
     if (end && end.toDateString() !== start.toDateString()) {
-      s += ` – ${end.toLocaleDateString('en-US', opts)}`
+      s += ` – ${end.toLocaleDateString('en-US', opts)}`;
     }
-    return s
-  }
+    return s;
+  };
 
   const formatTimeRange = () => {
-    if (event.all_day) return 'All day'
-    if (!event.start_time) return 'Time not specified'
+    if (event.all_day) return 'All day';
+    if (!event.start_time) return 'Time not specified';
     return event.end_time
       ? `${event.start_time} – ${event.end_time}`
-      : event.start_time
-  }
+      : event.start_time;
+  };
 
-  // shared classes for 90s‑style bevel - like the original design
   const win95Btn =
     'px-4 py-2 flex items-center justify-center text-3xl bg-[#c0c0c0] ' +
     'border-t-[2px] border-l-[2px] border-white ' +
     'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
     'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white ' +
-    'w-24 h-12'
+    'w-24 h-12';
 
   return (
     <div className="border-4 border-black rounded-none p-6 max-w-md w-full mx-auto bg-white shadow-none flex flex-col">
@@ -81,6 +95,22 @@ const EventCard: React.FC<EventCardProps> = ({
         <div>{formatDateRange()}</div>
         <div>{formatTimeRange()}</div>
       </div>
+
+      {/* FRIENDS WHO LIKED */}
+      {likedByFriends && likedByFriends.length > 0 ? (
+        <div className="mb-4">
+          <button
+            onClick={() => alert(`Liked by: ${likedByFriends.map(friend => friend.username).join(', ')}`)}
+            className="text-sm font-bold text-blue-600 underline"
+          >
+            {likedByFriends.length} {likedByFriends.length === 1 ? 'friend likes this' : 'friends like this'}
+          </button>
+        </div>
+      ) : (
+        <div className="mb-4 text-sm text-gray-500 italic">
+          No friends have liked this event yet.
+        </div>
+      )}
 
       {/* ACTION BUTTONS (always visible) */}
       {showActionButtons && (
@@ -126,7 +156,7 @@ const EventCard: React.FC<EventCardProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default EventCard
+export default EventCard;
