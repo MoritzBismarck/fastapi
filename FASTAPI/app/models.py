@@ -81,14 +81,14 @@ class Event(Base):
     __tablename__ = "events"
     
     id = Column(Integer, primary_key=True, nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=True)
     description = Column(String, nullable=False)  # Changed from 'details'
     
     # Date and Time fields
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)  # Optional for single-day events
-    start_time = Column(String, nullable=True)  # Keep as String for "14:00" format
-    end_time = Column(String, nullable=True)  # Keep as String for "14:00" format
+    start_time = Column(String, nullable=False)
+    end_time   = Column(String, nullable=True)
     
     place = Column(String, nullable=False)
     
