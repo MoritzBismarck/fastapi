@@ -10,150 +10,124 @@ interface EventCardProps {
   showActionButtons?: boolean;
 }
 
-const EventCard: React.FC<EventCardProps> = ({
-  event,
-  onLike,
-  onSkip,
-  onUnlike,
-  showActionButtons = true,
-}) => {
-  const [likedByFriends, setLikedByFriends] = useState<User[] | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  // Fetch liked_by_friends data using apiClient
-  useEffect(() => {
-    const fetchLikedByFriends = async () => {
-      try {
-        const response = await apiClient.get(`/events/${event.id}/detail`);
-        setLikedByFriends(response.data.liked_by_friends);
-      } catch (error) {
-        console.error('Error fetching liked_by_friends:', error);
-      }
-    };
-
-    fetchLikedByFriends();
-  }, [event.id]);
-
-  const formatDateRange = () => {
-    const start = new Date(event.start_date);
-    const end = event.end_date ? new Date(event.end_date) : null;
-    const opts: Intl.DateTimeFormatOptions = {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    };
-    let s = start.toLocaleDateString('en-US', opts);
-    if (end && end.toDateString() !== start.toDateString()) {
-      s += ` – ${end.toLocaleDateString('en-US', opts)}`;
-    }
-    return s;
+const EventCard = ({ event, onLike, onSkip, showActionButtons = true }) => {
+  const [isShowingDetails, setIsShowingDetails] = useState(false);
+  
+  const toggleDetails = () => {
+    setIsShowingDetails(!isShowingDetails);
   };
-
-  const formatTimeRange = () => {
-    if (event.all_day) return 'All day';
-    if (!event.start_time) return 'Time not specified';
-    return event.end_time
-      ? `${event.start_time} – ${event.end_time}`
-      : event.start_time;
-  };
-
-  const win95Btn =
-    'px-4 py-2 flex items-center justify-center text-3xl bg-[#c0c0c0] ' +
-    'border-t-[2px] border-l-[2px] border-white ' +
-    'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
-    'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white ' +
-    'w-24 h-12';
 
   return (
-    <div className="border-4 border-black rounded-none p-6 max-w-md w-full mx-auto bg-white shadow-none flex flex-col">
-      {/* IMAGE */}
-      {event.image_url && (
-        <div className="mb-4 -mx-6 -mt-6 h-64 relative">
-          <img
-            src={event.image_url}
+    <div className="max-w-sm mx-auto bg-[#C5C5C5] rounded-3xl p-3 shadow-lg border-black border-2">
+      <div className="rounded-2xl overflow-hidden border-2 border-gray-200 bg-black">
+        {/* MAIN IMAGE AREA */}
+        <div className="relative">
+          <img 
+            src={event.image_url || '/placeholder.jpg'} 
             alt={event.title}
-            className="w-full h-full object-cover rounded-none border-b-4 border-black"
+            className="w-full aspect-[3/4] object-cover"
           />
-        </div>
-      )}
-
-      {/* TITLE & VENUE */}
-      <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold uppercase tracking-wide">
-          {event.title}
-        </h2>
-        {event.place && (
-          <div className="text-sm font-mono bg-black text-white px-2 py-1">
-            {event.place}
+          
+          {/* FRIENDS AVATARS OVERLAY */}
+          <div className="absolute top-4 left-4 flex -space-x-2">
+            {event.liked_by_friends && event.liked_by_friends.slice(0, 4).map((friend, index) => (
+              <div key={index} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
+                {friend.profile_picture ? (
+                  <img src={friend.profile_picture} alt={friend.username} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gray-500 flex items-center justify-center text-white font-bold">
+                    {friend.username?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+          
+          {/* DATE/TIME OVERLAY */}
+          <div className="absolute top-4 right-4 text-right">
+            <div className="text-white font-mono text-sm">
+              {new Date(event.start_date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              }).replace(',', '')}
+              <br />
+              {event.start_time && (
+                <span>
+                  {event.start_time}
+                  {event.end_time && ` – ${event.end_time}`}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* CONTENT OVERLAY - CONDITIONAL BASED ON DETAILS VIEW */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+            {!isShowingDetails ? (
+              /* TITLE VIEW */
+              <>
+                <h2 className="text-white text-xl font-bold mb-1">
+                  {event.title}
+                </h2>
+                {event.description && (
+                  <p className="text-white text-sm line-clamp-2">
+                    {event.description}
+                  </p>
+                )}
+              </>
+            ) : (
+              /* DETAILS VIEW */
+              <div className="text-white">
+                <div className="mb-2">
+                  <div className="font-bold text-sm uppercase">Location:</div>
+                  <div>{event.place}</div>
+                </div>
+                
+                <div>
+                  <div className="font-bold text-sm uppercase">About:</div>
+                  <p className="text-sm whitespace-pre-line">
+                    {event.description}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* WHEN */}
-      <div className="mb-4 font-mono">
-        <div className="text-sm font-bold mb-1">When:</div>
-        <div>{formatDateRange()}</div>
-        <div>{formatTimeRange()}</div>
-      </div>
-
-      {/* FRIENDS WHO LIKED */}
-      {likedByFriends && likedByFriends.length > 0 ? (
-        <div className="mb-4">
-          <button
-            onClick={() => alert(`Liked by: ${likedByFriends.map(friend => friend.username).join(', ')}`)}
-            className="text-sm font-bold text-blue-600 underline"
+      
+      {/* CONTROL BUTTONS */}
+      <div className="flex justify-between items-center mt-4 px-6">
+        {/* SKIP BUTTON */}
+        {showActionButtons && onSkip && (
+          <button 
+            onClick={onSkip}
+            className="w-16 h-16 rounded-full bg-[#9e2755] flex items-center justify-center shadow-md hover:brightness-110"
+            aria-label="Skip"
           >
-            {likedByFriends.length} {likedByFriends.length === 1 ? 'friend likes this' : 'friends like this'}
+            <span className="text-white text-2xl font-bold">×</span>
           </button>
-        </div>
-      ) : (
-        <div className="mb-4 text-sm text-gray-500 italic">
-          No friends have liked this event yet.
-        </div>
-      )}
-
-      {/* ACTION BUTTONS (always visible) */}
-      {showActionButtons && (
-        <div className="flex w-full justify-between px-8 mb-4">
-          {onSkip && (
-            <button
-              onClick={onSkip}
-              aria-label="Skip"
-              className={win95Btn}
-            >
-              <span className="text-red-600 font-bold">×</span>
-            </button>
-          )}
-          {onLike && (
-            <button
-              onClick={onLike}
-              aria-label="Like"
-              className={win95Btn}
-            >
-              <span className="text-green-600 font-bold">♥</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* EXPANDED-ONLY: description + address */}
-      {isExpanded && (
-        <>
-          <div className="mb-4 font-sans">
-            <div className="text-sm font-bold mb-1">Description:</div>
-            <p className="whitespace-pre-line">{event.description}</p>
-          </div>
-        </>
-      )}
-
-      {/* SHOW MORE / SHOW LESS */}
-      <div className="mt-auto pt-4 border-t-4 border-black text-center">
-        <button
-          onClick={() => setIsExpanded(x => !x)}
-          className="font-bold uppercase tracking-wider"
+        )}
+        
+        {/* DETAILS BUTTON */}
+        <button 
+          onClick={toggleDetails}
+          className="w-20 h-6 bg-[#A8A8A8] border-2 border-t-white border-l-white border-b-[#666] border-r-[#666] rounded-md flex items-center justify-center shadow-md active:translate-y-[1px] active:shadow-sm transition-all"
         >
-          {isExpanded ? 'Show less' : 'Show more'}
+          <span className="text-gray-700 text-sm font-medium">
+            Details
+          </span>
         </button>
+        
+        {/* LIKE BUTTON */}
+        {showActionButtons && onLike && (
+          <button 
+            onClick={onLike}
+            className="w-16 h-16 rounded-full bg-[#19a36f] flex items-center justify-center shadow-md hover:brightness-110"
+            aria-label="Like"
+          >
+            <span className="text-white text-2xl">♥</span>
+          </button>
+        )}
       </div>
     </div>
   );

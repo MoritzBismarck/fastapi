@@ -26,34 +26,38 @@ const Login: React.FC = () => {
   }, []);
   
   return (
-    <div className="py-4">
-      <h1 className="text-2xl font-bold mb-4">The BONE SOCIAL WEB PROJECT</h1>
-      
-      <hr className="border-gray-400 my-6" />
-      
-      {isLoading ? (
-        <p>Loading...</p>
-      ) : !hasUsers ? (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-          <p>It looks like this is a new installation. You need to create the first administrator account.</p>
-          <Link to="/signup/first-user" className="underline font-bold">
-            Create First Admin Account
-          </Link>
-        </div>
-      ) : (
-        <>
-          <h2 className="text-xl font-bold mb-4">Login if you have an account</h2>
-          <LoginForm />
-          <p className="mb-6">If you don't have an account yet, find one of our qr codes</p>
-        </>
-      )}
-      
-      <hr className="border-gray-400 my-6" />
-      
-      <address className="italic mb-4">
-        Webmaster: <a href="mailto:webmaster@example.com" className="text-blue-700 underline hover:text-blue-900">info@fickdoomscrolling.com</a><br />
-        Last Updated: April 2025
-      </address>
+    <div className="min-h-screen bg-gray-300 text-black font-mono flex flex-col items-center justify-center">
+      <div className="w-full max-w-md border-4 border-black bg-white p-6">
+        <h1 className="text-4xl font-bold text-center mb-4 border-b-4 border-black pb-2">Bone Sozial</h1>
+        <p className="text-center mb-6">Beta Release</p>
+
+        {isLoading ? (
+          <p className="text-lg font-bold text-center">Loading...</p>
+        ) : !hasUsers ? (
+          <div className="bg-yellow-200 border-2 border-black text-black px-4 py-3 mb-4 text-center">
+            <p className="font-bold mb-2">New Installation Detected</p>
+            <p className="mb-4">Create the first administrator account to get started.</p>
+            <Link to="/signup/first-user" className="underline font-bold text-blue-600 hover:text-blue-800">
+              Create Admin Account
+            </Link>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold mb-4 border-b-2 border-black pb-2">Login</h2>
+            <div className="bg-gray-100 border-2 border-black p-4">
+              <LoginForm />
+            </div>
+            <p className="mt-4 text-center">Account creation only with invitation</p>
+          </>
+        )}
+      </div>
+
+      <footer className="mt-6 text-center">
+        <hr className="border-black w-full mb-4" />
+        <address className="italic">
+          CONNECTION: <span className="font-bold">bone-social.com</span>
+        </address>
+      </footer>
     </div>
   );
 };
