@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Event, User } from '../types';
-import { apiClient } from '../api/client'; // Import your centralized API client
+import React, { useState } from 'react';
+import { Event } from '../types';
 
 interface EventCardProps {
   event: Event;
@@ -10,7 +9,7 @@ interface EventCardProps {
   showActionButtons?: boolean;
 }
 
-const EventCard = ({ event, onLike, onSkip, showActionButtons = true }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showActionButtons = true }) => {
   const [isShowingDetails, setIsShowingDetails] = useState(false);
   
   const toggleDetails = () => {
