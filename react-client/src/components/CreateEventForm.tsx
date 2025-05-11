@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { post, apiClient } from '../api/client';
 import { getStoredToken } from '../utils/tokenStorage';
+import imageCompression from 'browser-image-compression';
 
 interface CreateEventFormProps {
   onEventCreated: () => void;
@@ -38,8 +39,18 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
   const onCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    setValue('cover', files);
-    setCoverPreview(URL.createObjectURL(files[0]));
+    try {
+      setValue('cover', files);
+      setCoverPreview(URL.createObjectURL(files[0]));
+      const options = {
+        maxSizeMB: 3,
+        maxWidthOrHeight: 1200, // Slightly larger than profile pics since event images are more prominent
+        useWebWorker: true
+      };
+    } catch (error) {
+      console.error('Error creating cover preview:', error);
+      alert('❌ Could not create cover preview.');
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -48,6 +59,18 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
       // 1) Upload cover
       let image_url = '';
       if (data.cover && data.cover.length) {
+        const options = {
+          maxSizeMB: 3,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true
+        };
+        
+        // Compress the image
+        const originalFile = data.cover[0];
+        const compressedFile = await imageCompression(originalFile, options);
+        
+        console.log('Original size:', originalFile.size / 1024, 'KB');
+        console.log('Compressed size:', compressedFile.size / 1024, 'KB');
         const form = new FormData();
         form.append('file', data.cover[0]);
         const resp = await apiClient.post<{ file_url: string }>(

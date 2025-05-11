@@ -6,6 +6,7 @@ import { get, put } from '../api/client';
 import { User } from '../types';
 import { uploadProfilePicture } from '../api/profileApi';
 import { useNavigate } from 'react-router-dom';
+import imageCompression from 'browser-image-compression';
 
 const Profile: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -84,7 +85,21 @@ const Profile: React.FC = () => {
     try {
       setUploading(true);
       
-      const updatedUser = await uploadProfilePicture(selectedFile);
+      // Compression options
+      const options = {
+        maxSizeMB: 4,
+        // maxWidthOrHeight: 1024,
+        useWebWorker: true
+      };
+      
+      // Compress the image before uploading
+      const compressedFile = await imageCompression(selectedFile, options);
+      
+      // Log compression results for debugging
+      console.log('Original size:', selectedFile.size / 1024, 'KB');
+      console.log('Compressed size:', compressedFile.size / 1024, 'KB');
+      
+      const updatedUser = await uploadProfilePicture(compressedFile);
       setProfileData(updatedUser);
       setSelectedFile(null);
     } catch (error: any) {

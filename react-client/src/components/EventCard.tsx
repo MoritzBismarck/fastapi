@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Event } from '../types';
+import FriendsLikedButton from './FriendsLikedButton';
 
 interface EventCardProps {
   event: Event;
@@ -16,6 +17,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
     setIsShowingDetails(!isShowingDetails);
   };
 
+  const handleUserClick = (user: any) => {
+    // You can add navigation to user profile here if needed
+    console.log('User clicked:', user);
+  };
+
   return (
     <div className="max-w-sm mx-auto bg-[#C5C5C5] rounded-3xl p-3 shadow-lg border-black border-2">
       <div className="rounded-2xl overflow-hidden border-2 border-gray-200 bg-black">
@@ -27,20 +33,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
             className="w-full aspect-[3/4] object-cover"
           />
           
-          {/* FRIENDS AVATARS OVERLAY */}
-          <div className="absolute top-4 left-4 flex -space-x-2">
-            {event.liked_by_friends && event.liked_by_friends.slice(0, 4).map((friend, index) => (
-              <div key={index} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
-                {friend.profile_picture ? (
-                  <img src={friend.profile_picture} alt={friend.username} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gray-500 flex items-center justify-center text-white font-bold">
-                    {friend.username?.[0]?.toUpperCase() || '?'}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* FRIENDS AVATARS OVERLAY - Using the new component */}
+          {event.liked_by_friends && event.liked_by_friends.length > 0 && (
+            <div className="absolute top-4 left-4">
+              <FriendsLikedButton
+                friends={event.liked_by_friends}
+                onUserClick={handleUserClick}
+              />
+            </div>
+          )}
           
           {/* DATE/TIME OVERLAY */}
           <div className="absolute top-4 right-4 text-right">

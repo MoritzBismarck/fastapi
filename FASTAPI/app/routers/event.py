@@ -104,7 +104,7 @@ async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depen
     return {"file_url": file_url}
 
 
-@router.get("", response_model=List[schemas.EventResponse])
+@router.get("", response_model=List[schemas.EventWithLikedUsers])  # Change response_model from EventResponse to EventWithLikedUsers
 def get_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -141,9 +141,75 @@ def get_events(
     # Get events with pagination, sorted by start_date
     events = query.order_by(models.Event.start_date).offset(skip).limit(limit).all()
     
-    return events
+    # NEW CODE: Get friend IDs for the current user
+    friend_ids = []
+    
+    # Get friendships where user is requester
+    requester_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.requester_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add addressee IDs to friend_ids
+    friend_ids.extend([f.addressee_id for f in requester_friendships])
+    
+    # Get friendships where user is addressee
+    addressee_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.addressee_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add requester IDs to friend_ids
+    friend_ids.extend([f.requester_id for f in addressee_friendships])
+    
+    # NEW CODE: For each event, get friends who liked it
+    result = []
+    for event in events:
+        # Get users who have liked this event and are friends with current user
+        friends_who_liked = db.query(models.User).join(
+            models.EventLike,
+            models.EventLike.user_id == models.User.id
+        ).filter(
+            and_(
+                models.EventLike.event_id == event.id,
+                models.User.id.in_(friend_ids)
+            )
+        ).all()
+        
+        # Check if current user has liked this event
+        user_liked = db.query(models.EventLike).filter(
+            and_(
+                models.EventLike.user_id == current_user.id,
+                models.EventLike.event_id == event.id
+            )
+        ).first() is not None
+        
+        # Create result dictionary with event and additional fields
+        event_dict = {
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_date": event.start_date,
+            "end_date": event.end_date,
+            "start_time": event.start_time,
+            "end_time": event.end_time,
+            "place": event.place,
+            "image_url": event.image_url,
+            "created_at": event.created_at,
+            "created_by": event.created_by,
+            "liked_by_current_user": user_liked,
+            "liked_by_friends": friends_who_liked
+        }
+        
+        result.append(event_dict)
+    
+    return result
 
-@router.get("/liked", response_model=List[schemas.EventResponse])
+@router.get("/liked", response_model=List[schemas.EventWithLikedUsers])  # Change response model
 def get_liked_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -153,16 +219,76 @@ def get_liked_events(
     """Get events liked by the current user"""
     
     # Get IDs of events liked by current user
-    liked_events = db.query(models.Event).join(
+    liked_events_query = db.query(models.Event).join(
         models.EventLike,
         models.EventLike.event_id == models.Event.id
     ).filter(
         models.EventLike.user_id == current_user.id
     ).order_by(
-        models.Event.start_date  # Changed from event_date to start_date
-    ).offset(skip).limit(limit).all()
+        models.Event.start_date
+    ).offset(skip).limit(limit)
     
-    return liked_events
+    liked_events = liked_events_query.all()
+    
+    # Get friend IDs for the current user
+    friend_ids = set()  # Using a set to avoid duplicates
+    
+    # Get friendships where user is requester
+    requester_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.requester_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add addressee IDs to friend_ids
+    for f in requester_friendships:
+        friend_ids.add(f.addressee_id)
+    
+    # Get friendships where user is addressee
+    addressee_friendships = db.query(models.Friendship).filter(
+        and_(
+            models.Friendship.addressee_id == current_user.id,
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    
+    # Add requester IDs to friend_ids
+    for f in addressee_friendships:
+        friend_ids.add(f.requester_id)
+    
+    # Prepare the results
+    results = []
+    
+    for event in liked_events:
+        # Initialize liked_by_friends as an empty list
+        friends_who_liked = []
+        
+        # Only query for friends who liked if user has friends
+        if friend_ids:
+            # Get users who have liked this event and are friends with current user
+            friends_who_liked = db.query(models.User).join(
+                models.EventLike,
+                models.EventLike.user_id == models.User.id
+            ).filter(
+                and_(
+                    models.EventLike.event_id == event.id,
+                    models.User.id.in_(friend_ids)
+                )
+            ).all()
+        
+        # Create a dictionary with all event attributes
+        event_dict = {}
+        for column in event.__table__.columns:
+            event_dict[column.name] = getattr(event, column.name)
+        
+        # Add the additional fields
+        event_dict["liked_by_current_user"] = True  # User has definitely liked these events
+        event_dict["liked_by_friends"] = friends_who_liked
+        
+        results.append(event_dict)
+    
+    return results
 
 @router.get("/{id}/detail", response_model=schemas.EventWithLikedUsers)
 def get_event_detail(
