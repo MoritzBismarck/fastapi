@@ -3,15 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { post } from '../api/client';
 import Button from '../components/Button';
+import Header from '../components/Header';
 
 const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Check if this is first user based on path rather than prop
+
   const isFirstUserPage = location.pathname === '/signup/first-user';
-  
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,16 +21,13 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isCheckingFirstUser, setIsCheckingFirstUser] = useState(true);
-  
-  // Check if this is truly the first user
+
   useEffect(() => {
     const checkFirstUser = async () => {
       try {
         const response = await fetch('/api/users/count');
         const data = await response.json();
-
         if (data.count > 0 && isFirstUserPage) {
-          // Redirect to login if the first user already exists
           navigate('/', { state: { error: 'First user already exists. Please log in.' } });
         }
       } catch (err) {
@@ -47,36 +44,28 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
       setIsCheckingFirstUser(false);
     }
   }, [isFirstUserPage, navigate]);
-  
-  // Redirect to login if no token is provided and not first user
+
   useEffect(() => {
     if (!isFirstUserPage && !token) {
       navigate('/', { state: { error: 'Invalid or missing invitation token.' } });
     }
   }, [token, navigate, isFirstUserPage]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Basic validation
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
     if (password.length < 8) {
       setError('Password must be at least 8 characters long');
       return;
     }
-    
     setLoading(true);
     setError('');
-    
     try {
-      // For the first user, use a special token value
       const effectiveToken = isFirstUserPage ? 'first-user' : token;
-      
-      // Register user with the token
       await post(`/users/${effectiveToken}`, {
         username,
         email,
@@ -84,8 +73,6 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
         first_name: firstName,
         last_name: lastName
       });
-      
-      // Redirect to login page with success message
       navigate('/', { 
         state: { 
           message: isFirstUserPage
@@ -100,7 +87,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
       setLoading(false);
     }
   };
-  
+
   if (isCheckingFirstUser) {
     return (
       <div className="py-4 max-w-md mx-auto">
@@ -112,111 +99,158 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
       </div>
     );
   }
-  
+
   return (
-    <div className="py-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">
-        {isFirstUserPage ? 'Create Administrator Account' : 'You have been invited 🎉'}
-      </h1>
-      
-      {error && (
-        <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
-          {error}
+    <div className="min-h-screen flex flex-col items-center justify-center font-mono">
+      <div className="w-full max-w-md px-4">
+        {/* Centered title + underline, matching login */}
+        <Header 
+          variant="login" 
+          title={isFirstUserPage ? "Create Administrator Account" : "Bone Sozial - Beta"} 
+        />
+
+        {/* Card-style form, matching login */}
+        <h1 className="text-2xl font-bold text-center mb-4">You have been invited 🎉</h1>
+        <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
+          {isFirstUserPage && (
+            <p className="text-[#f5ead3] mb-4">Create the first admin account to get started.</p>
+          )}
+          {!isFirstUserPage && (
+            <p className="text-[#f5ead3] mb-4">Create Your Account</p>
+          )}
+
+          {error && (
+            <div className="text-red-700 bg-red-100 p-2 text-sm mb-3">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+              required
+            />
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+              required
+            />
+            <input
+              type="text"
+              placeholder="First Name (Optional)"
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+            />
+            <input
+              type="text"
+              placeholder="Last Name (Optional)"
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
+              className="
+                w-full
+                bg-[#E5DCCC]
+                text-[#222]
+                placeholder-[#918880] placeholder-opacity-100
+                px-3 py-2
+                font-mono
+                focus:outline-none
+              "
+            />
+
+            <Button
+              type="submit"
+              disabled={loading}
+              fullWidth
+              className="
+                font-bold
+                bg-[#A59B91]
+                border-t-white border-l-white
+                border-b-[#9D9086] border-r-[#9D9086]
+                text-[#f5ead3]
+              "
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </Button>
+          </form>
         </div>
-      )}
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="username" className="block mb-1">Username:</label>
-          <input 
-            id="username"
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-            required
-          />
+
+        {/* Footer link, matching login */}
+        <div className="mt-6 text-center text-[#222] text-sm space-y-1">
+          <a
+            href="/"
+            className="text-blue-700 underline hover:text-blue-900"
+            onClick={e => {
+              e.preventDefault();
+              navigate('/');
+            }}
+          >
+            Return to Login
+          </a>
         </div>
-        
-        <div>
-          <label htmlFor="email" className="block mb-1">Email:</label>
-          <input 
-            id="email"
-            type="email" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-            required
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="password" className="block mb-1">Password:</label>
-          <input 
-            id="password"
-            type="password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
-        </div>
-        
-        <div>
-          <label htmlFor="confirm-password" className="block mb-1">Confirm Password:</label>
-          <input 
-            id="confirm-password"
-            type="password" 
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-            required
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="first-name" className="block mb-1">First Name (Optional):</label>
-          <input 
-            id="first-name"
-            type="text" 
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="last-name" className="block mb-1">Last Name (Optional):</label>
-          <input 
-            id="last-name"
-            type="text" 
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className="border border-gray-500 p-1 w-full font-mono bg-white"
-          />
-        </div>
-        
-        <Button 
-          type="submit" 
-          disabled={loading}
-          fullWidth
-        >
-          {loading ? 'Creating Account...' : 'Create Account'}
-        </Button>
-      </form>
-      
-      <div className="mt-6 text-center">
-        <a 
-          href="/" 
-          className="text-blue-700 underline hover:text-blue-900"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate('/');
-          }}
-        >
-          Return to Login
-        </a>
       </div>
     </div>
   );

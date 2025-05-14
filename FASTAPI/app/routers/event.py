@@ -209,64 +209,62 @@ def get_events(
     
     return result
 
-@router.get("/liked", response_model=List[schemas.EventWithLikedUsers])  # Change response model
+# Completely new get_liked_events function in FASTAPI/app/routers/event.py
+
+@router.get("/liked", response_model=List[schemas.EventWithLikedUsers])
 def get_liked_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
     limit: int = 20,
     skip: int = 0
 ):
-    """Get events liked by the current user"""
+    """Get events liked by the current user with creator and friend information"""
     
-    # Get IDs of events liked by current user
-    liked_events_query = db.query(models.Event).join(
-        models.EventLike,
-        models.EventLike.event_id == models.Event.id
-    ).filter(
+    # Step 1: Get all events liked by the current user
+    liked_event_ids = db.query(models.EventLike.event_id).filter(
         models.EventLike.user_id == current_user.id
+    ).subquery()
+    
+    # Step 2: Get the events with their creators
+    events_with_creators = db.query(
+        models.Event,
+        models.User.id.label('creator_id'),
+        models.User.username.label('creator_username'),
+        models.User.profile_picture.label('creator_profile_picture')
+    ).join(
+        models.User,
+        models.Event.created_by == models.User.id
+    ).filter(
+        models.Event.id.in_(liked_event_ids)
     ).order_by(
         models.Event.start_date
-    ).offset(skip).limit(limit)
+    ).offset(skip).limit(limit).all()
     
-    liked_events = liked_events_query.all()
-    
-    # Get friend IDs for the current user
-    friend_ids = set()  # Using a set to avoid duplicates
-    
-    # Get friendships where user is requester
-    requester_friendships = db.query(models.Friendship).filter(
+    # Step 3: Get current user's friends
+    accepted_friendships = db.query(models.Friendship).filter(
         and_(
-            models.Friendship.requester_id == current_user.id,
+            or_(
+                models.Friendship.requester_id == current_user.id,
+                models.Friendship.addressee_id == current_user.id
+            ),
             models.Friendship.status == "accepted"
         )
     ).all()
     
-    # Add addressee IDs to friend_ids
-    for f in requester_friendships:
-        friend_ids.add(f.addressee_id)
+    # Extract friend IDs
+    friend_ids = set()
+    for friendship in accepted_friendships:
+        if friendship.requester_id == current_user.id:
+            friend_ids.add(friendship.addressee_id)
+        else:
+            friend_ids.add(friendship.requester_id)
     
-    # Get friendships where user is addressee
-    addressee_friendships = db.query(models.Friendship).filter(
-        and_(
-            models.Friendship.addressee_id == current_user.id,
-            models.Friendship.status == "accepted"
-        )
-    ).all()
-    
-    # Add requester IDs to friend_ids
-    for f in addressee_friendships:
-        friend_ids.add(f.requester_id)
-    
-    # Prepare the results
+    # Step 4: For each event, get friends who also liked it
     results = []
-    
-    for event in liked_events:
-        # Initialize liked_by_friends as an empty list
+    for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
+        # Get friends who liked this event
         friends_who_liked = []
-        
-        # Only query for friends who liked if user has friends
         if friend_ids:
-            # Get users who have liked this event and are friends with current user
             friends_who_liked = db.query(models.User).join(
                 models.EventLike,
                 models.EventLike.user_id == models.User.id
@@ -277,16 +275,29 @@ def get_liked_events(
                 )
             ).all()
         
-        # Create a dictionary with all event attributes
-        event_dict = {}
-        for column in event.__table__.columns:
-            event_dict[column.name] = getattr(event, column.name)
+        # Create the response object
+        event_response = {
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_date": event.start_date,
+            "end_date": event.end_date,
+            "start_time": event.start_time,
+            "end_time": event.end_time,
+            "place": event.place,
+            "image_url": event.image_url,
+            "created_at": event.created_at,
+            "created_by": event.created_by,
+            "liked_by_current_user": True,  # Always true since we're fetching liked events
+            "liked_by_friends": friends_who_liked,
+            "creator": {
+                "id": creator_id,
+                "username": creator_username,
+                "profile_picture": creator_profile_picture
+            }
+        }
         
-        # Add the additional fields
-        event_dict["liked_by_current_user"] = True  # User has definitely liked these events
-        event_dict["liked_by_friends"] = friends_who_liked
-        
-        results.append(event_dict)
+        results.append(event_response)
     
     return results
 

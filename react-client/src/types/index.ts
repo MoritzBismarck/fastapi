@@ -20,6 +20,12 @@ export interface User {
     friend: User;
   }
   
+  export interface CreatorInfo {
+    id: number;
+    username: string;
+    profile_picture?: string;
+  }
+  
   export interface Event {
     id: number;
     title: string;
@@ -32,7 +38,9 @@ export interface User {
     place: string;
     image_url?: string;
     created_at: string;
+    created_by: number;
     liked_by_friends?: User[];
+    creator?: CreatorInfo; // Add creator information
   }
   
   export interface Notification {
@@ -41,3 +49,13 @@ export interface User {
     is_read: boolean;
     created_at: string;
   }
+
+  export interface LoginCredentials {
+  emailOrUsername: string;
+  password: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}

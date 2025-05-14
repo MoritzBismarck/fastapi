@@ -26,10 +26,11 @@ const Button: React.FC<ButtonProps> = ({
 }) => {
   // Base styles for the Windows 95 look
   const baseStyle = 
-    'flex items-center justify-center bg-[#c0c0c0] ' +
-    'border-t-[2px] border-l-[2px] border-white ' +
-    'border-b-[2px] border-r-[2px] border-b-[#808080] border-r-[#808080] ' +
-    'active:border-t-[#808080] active:border-l-[#808080] active:border-b-white active:border-r-white ' +
+    'flex items-center justify-center bg-[#A59B91] ' +
+    'border-t-2 border-l-2 border-b-2 border-r-2 ' +
+    'border-t-[#F9F2E3] border-l-[#F9F2E3] ' + // Cream for top/left
+    'border-b-[#2A2A2A] border-r-[#2A2A2A] ' + // Dark for bottom/right
+    'active:border-t-[#2A2A2A] active:border-l-[#2A2A2A] active:border-b-[#F9F2E3] active:border-r-[#F9F2E3] ' +
     'disabled:opacity-50 disabled:cursor-not-allowed';
   
   // Size variations
@@ -41,8 +42,8 @@ const Button: React.FC<ButtonProps> = ({
   
   // Variant styles - primarily affects text color
   const variantClasses = {
-    primary: 'text-black',
-    secondary: 'text-gray-700',
+    primary: 'text-[#F9F2E3]',
+    secondary: 'text-black',
     danger: 'text-red-600',
   };
   

@@ -146,9 +146,18 @@ class EventLike(BaseModel):
     class Config:
         orm_mode = True
 
+class CreatorInfo(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
+
 class EventWithLikedUsers(EventResponse):
     liked_by_current_user: bool = False
     liked_by_friends: List[UserOut] = []
+    creator: Optional[CreatorInfo] = None  # Add creator information
     
     class Config:
         orm_mode = True

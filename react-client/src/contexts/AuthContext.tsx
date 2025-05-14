@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { User } from '../types';
-import { login as apiLogin, logout as apiLogout, LoginCredentials } from '../api/authApi';
+import { login as apiLogin, logout as apiLogout, } from '../api/authApi';
+import { LoginCredentials } from '../types';
 import { getCurrentUser } from '../api/userApi';
 import { 
   storeToken, 
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store the token
       storeToken(response.access_token);
-      storeUsername(credentials.email);
+      storeUsername(credentials.emailOrUsername);
       
       // Set authenticated state
       setIsAuthenticated(true);
@@ -86,8 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Create a temporary user object until we can fetch the full profile
       setUser({
         id: 0, // This will be updated when we fetch the full profile
-        username: getStoredUsername() || credentials.email,
-        email: credentials.email,
+        username: getStoredUsername() || credentials.emailOrUsername,
+        email: credentials.emailOrUsername,
         created_at: new Date().toISOString() // Add a temporary created_at property
       });
       
