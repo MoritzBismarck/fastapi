@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   variant = 'default',
-  title = 'Bone Sozial - Beta',
+  title = 'THE BONE - beta',
 }) => {
   const { username } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);

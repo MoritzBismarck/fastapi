@@ -6,7 +6,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'mono': ['Courier', 'monospace'], // Override font-mono to use Courier
+        'mono': ['Courier New', 'monospace'], // Override font-mono to use Courier
       },
     },
   },

@@ -30,7 +30,7 @@ body {
 }
 
 body {
-        font-family: Courier, monospace;
+        font-family: 'Courier New', Courier, monospace;
         margin: 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -53,47 +53,29 @@ body {
   margin: 0;
 }
 
-/* WebKit (Chrome, Safari, Edge) */
+/* —— CHROME / SAFARI / EDGE —— */
 ::-webkit-scrollbar {
-  width: 16px;
-  background-color: #c0c0c0;  /* track */
-}
-::-webkit-scrollbar-track {
-  background-color: #c0c0c0;
-}
-::-webkit-scrollbar-thumb {
-  box-sizing: border-box;     /* include border in width */
-  background-color: #fff;     /* thumb */
-  border: 2px solid #808080;  /* 90s‑style border */
-}
-::-webkit-scrollbar-button {
-  width: 16px;
-  height: 16px;
-  background-color: #c0c0c0;
-}
-/* Up arrow */
-::-webkit-scrollbar-button:vertical:decrement {
-  background-image:
-    linear-gradient(to bottom,
-      #808080 0%, #808080 33%,
-      transparent 33%, transparent 66%,
-      #808080 66%, #808080 100%);
-  background-repeat: no-repeat;
-  background-position: center 4px;
-}
-/* Down arrow */
-::-webkit-scrollbar-button:vertical:increment {
-  background-image:
-    linear-gradient(to top,
-      #808080 0%, #808080 33%,
-      transparent 33%, transparent 66%,
-      #808080 66%, #808080 100%);
-  background-repeat: no-repeat;
-  background-position: center 4px;
+  width: 18px;
 }
 
-/* Firefox */
+::-webkit-scrollbar-track {
+  background-color: #2C2C2C;   /* dark charcoal track */
+}
+
+::-webkit-scrollbar-thumb {
+  box-sizing: border-box;
+  background-color: #F9F2E3;   /* cream thumb */
+  border: 3px solid #2C2C2C;   /* same charcoal as the track */
+}
+
+/* fill the bottom-right corner, if two scrollbars meet */
+::-webkit-scrollbar-corner {
+  background-color: #2C2C2C;
+}
+/* ——— Firefox ——— */
 html {
-  scrollbar-width: auto;          /* track+thumb wide */
-  scrollbar-color: #fff #c0c0c0;  /* thumb, track */
+  scrollbar-width: auto;         /* ~16px wide */
+  scrollbar-color:
+    #F9F2E3    /* thumb */
+    #2C2C2C;   /* track */
 }

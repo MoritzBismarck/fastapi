@@ -73,7 +73,7 @@ const Login: React.FC = () => {
 
         {/* card */}
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
-          <p className="text-[#f5ead3] mb-4">Have an account?</p>
+          <p className="text-[#f5ead3] mb-4 font-bold">Use your time!</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
@@ -89,6 +89,7 @@ const Login: React.FC = () => {
                 px-3 py-2
                 font-mono
                 focus:outline-none
+                font-bold
               "
               required
             />
@@ -106,6 +107,7 @@ const Login: React.FC = () => {
                 px-3 py-2
                 font-mono
                 focus:outline-none
+                font-bold
               "
               required
             />
@@ -136,7 +138,7 @@ const Login: React.FC = () => {
         {/* footer notes */}
         <div className="mt-6 text-center text-[#222] text-sm space-y-1">
           <p>Beta: Account creation only with invitation</p>
-          <p>About: Simple networking with real impact</p>
+          <p>About: Social media with purpose</p>
         </div>
       </div>
     </div>
