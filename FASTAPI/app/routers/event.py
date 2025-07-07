@@ -22,9 +22,15 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-
-    # Create a new event with the provided data
-    new_event = models.Event(**event.model_dump(), created_by=current_user.id)
+    # Map Pydantic data to SQLAlchemy model
+    event_data = event.model_dump()
+    # Ensure nested location is stored as dict
+    event_data['location'] = event_data['location']
+    # Use creator_id (matches model) instead of created_by
+    new_event = models.Event(
+        **event_data,
+        creator_id=current_user.id
+    )
     db.add(new_event)
     db.commit()
     db.refresh(new_event)

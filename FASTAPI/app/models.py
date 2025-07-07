@@ -1,8 +1,17 @@
 from .database import Base
-from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint, Date, Time, Enum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
-from sqlalchemy.sql.sqltypes import Date, Time
+from datetime import datetime
+from enum import Enum as PyEnum
+
+# Enums for controlled vocabularies
+event_visibility = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='event_visibility')
+event_status     = Enum('ACTIVE', 'CANCELLED', 'DELETED', name='event_status')
+rsvp_status      = Enum('INTERESTED', 'GOING', 'CANCELLED', name='rsvp_status')
+match_context    = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='match_context')
+report_reason    = Enum('SPAM', 'FAKE', 'HARASSMENT', name='report_reason')
+
 
 class Post(Base):
     __tablename__ = "posts"
@@ -38,7 +47,8 @@ class User(Base):
     "InvitationToken", 
     foreign_keys=[invitation_token_id],
     back_populates="invited_users"
-)
+    )
+    is_public = Column(Boolean, nullable=False, server_default="FALSE") 
 
 
 class Friendship(Base):
@@ -78,26 +88,40 @@ class InvitationToken(Base):
 
 
 class Event(Base):
-    __tablename__ = "events"
-    
-    id = Column(Integer, primary_key=True, nullable=False)
-    title = Column(String, nullable=True)
-    description = Column(String, nullable=False)  # Changed from 'details'
-    
-    # Date and Time fields
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=True)  # Optional for single-day events
-    start_time = Column(String, nullable=False)
-    end_time   = Column(String, nullable=True)
-    
-    place = Column(String, nullable=False)
-    
-    image_url = Column(String, nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
-    created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    
-    # Relationships
-    creator = relationship("User", backref="created_events")
+    __tablename__ = 'events'
+
+    id               = Column(Integer, primary_key=True, nullable=False)
+    title            = Column(String, nullable=False)
+    description      = Column(String, nullable=False)
+
+    # Visibility and lifecycle
+    visibility       = Column(event_visibility, nullable=False, server_default='PUBLIC')
+    status           = Column(event_status,     nullable=False, server_default='ACTIVE')
+
+    # Timing
+    start_date       = Column(Date, nullable=False)
+    end_date         = Column(Date, nullable=True)
+    start_time       = Column(Time, nullable=True)
+    end_time         = Column(Time, nullable=True)
+    rsvp_close_time  = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Location & media
+    location         = Column(JSON, nullable=True)  # { address, lat, lng }
+    cover_photo_url  = Column(String, nullable=True)
+
+    # Capacity & counts
+    guest_limit      = Column(Integer, nullable=True)
+    interested_count = Column(Integer, nullable=False, server_default='0')
+    going_count      = Column(Integer, nullable=False, server_default='0')
+
+    # Audit
+    created_at       = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    updated_at       = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'), onupdate=text('now()'))
+    last_edited_at   = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Ownership
+    creator_id       = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    creator          = relationship('User', back_populates='created_events')
 
 class EventLike(Base):
     __tablename__ = "event_likes"
@@ -129,5 +153,21 @@ class Notification(Base):
     user = relationship("User")
 
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    session_uuid = Column(String, nullable=False, unique=True)
+    caretaker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    helpseeker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    started_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    end_reason = Column(String, nullable=True)  # 'timeout', 'disconnect'
+    
+    # Relationships
+    caretaker = relationship("User", foreign_keys=[caretaker_id])
+    helpseeker = relationship("User", foreign_keys=[helpseeker_id])
+
+User.created_events = relationship('Event', back_populates='creator')
 
 

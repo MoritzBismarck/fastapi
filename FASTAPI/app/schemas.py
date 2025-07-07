@@ -115,41 +115,61 @@ class FriendsOverview(BaseModel):
 
 
 # Add to FASTAPI/app/schemas.py
+class Location(BaseModel):
+    address: str
+    lat: float
+    lng: float
 
 class EventBase(BaseModel):
     title: str
     description: str
-    start_date: date  # Keep as date type for validation
-    start_time: Optional[str] = None  # Change to str to match db model
+    start_date: date
+    start_time: Optional[time] = None
     end_date: Optional[date] = None
-    end_time: Optional[str] = None  # Change to str to match db model
-    place: str  # Changed to match your column name
-    image_url: str  # Match nullable=False in your model
+    end_time: Optional[time] = None
+    location: Location
+    cover_photo_url: Optional[str] = None
+    guest_limit: Optional[int] = None
+    rsvp_close_time: Optional[datetime] = None
+    visibility: str = Field('PUBLIC', pattern='^(PUBLIC|PRIVATE|FRIENDS)$')
+
 
 class EventCreate(EventBase):
+    """Schema for creating a new event."""
     pass
+
 
 class EventResponse(EventBase):
     id: int
-    created_by: int
+    creator_id: int
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+class EventLikeResponse(BaseModel):
+    user_id: int
+    event_id: int
+    liked_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CreatorInfo(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class EventLike(BaseModel):
     id: int
     user_id: int
     event_id: int
     created_at: datetime
-    
-    class Config:
-        orm_mode = True
-
-class CreatorInfo(BaseModel):
-    id: int
-    username: str
-    profile_picture: Optional[str] = None
     
     class Config:
         orm_mode = True
