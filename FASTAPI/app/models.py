@@ -106,7 +106,7 @@ class Event(Base):
     rsvp_close_time  = Column(TIMESTAMP(timezone=True), nullable=True)
 
     # Location & media
-    location         = Column(JSON, nullable=True)  # { address, lat, lng }
+    location         = Column(String, nullable=False)
     cover_photo_url  = Column(String, nullable=True)
 
     # Capacity & counts
@@ -124,21 +124,17 @@ class Event(Base):
     creator          = relationship('User', back_populates='created_events')
 
 class EventLike(Base):
-    __tablename__ = "event_likes"
-    
-    id = Column(Integer, primary_key=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
-    
-    # Create a unique constraint to prevent duplicate likes
+    __tablename__ = 'event_likes'
     __table_args__ = (
-        UniqueConstraint('user_id', 'event_id', name='unique_user_event_like'),
+        UniqueConstraint('user_id', 'event_id', name='uc_like_user_event'),
     )
-    
-    # Define relationships
-    user = relationship("User")
-    event = relationship("Event")
+
+    user_id   = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    event_id  = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), primary_key=True)
+    liked_at  = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    user      = relationship('User', back_populates='likes')
+    event     = relationship('Event', backref='likes')
     
 class Notification(Base):
     __tablename__ = "notifications"
@@ -151,6 +147,85 @@ class Notification(Base):
     
     # Define relationship
     user = relationship("User")
+
+
+class RSVP(Base):
+    __tablename__ = 'rsvps'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'event_id', name='uc_rsvp_user_event'),
+    )
+
+    user_id      = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    event_id     = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), primary_key=True)
+    status       = Column(rsvp_status, nullable=False, server_default='GOING')
+    responded_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    user         = relationship('User', back_populates='rsvps')
+    event        = relationship('Event', backref='rsvps')
+
+class Match(Base):
+    __tablename__ = 'matches'
+
+    id                = Column(Integer, primary_key=True, nullable=False)
+    event_id          = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
+    context           = Column(match_context, nullable=False, server_default='PUBLIC')
+    created_at        = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    last_message_at   = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    event             = relationship('Event', backref='matches')
+    participants      = relationship('MatchParticipant', back_populates='match')
+
+class MatchParticipant(Base):
+    __tablename__ = 'match_participants'
+    __table_args__ = (
+        UniqueConstraint('match_id', 'user_id', name='uc_match_participant'),
+    )
+
+    match_id     = Column(Integer, ForeignKey('matches.id', ondelete='CASCADE'), primary_key=True)
+    user_id      = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    joined_at    = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    unread_count = Column(Integer, nullable=False, server_default='0')
+
+    match        = relationship('Match', back_populates='participants')
+    user         = relationship('User', back_populates='matches')
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+
+    id           = Column(Integer, primary_key=True, nullable=False)
+    match_id     = Column(Integer, ForeignKey('matches.id', ondelete='CASCADE'), nullable=False)
+    sender_id    = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    content      = Column(String, nullable=False)
+    sent_at      = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    match        = relationship('Match', backref='messages')
+    sender       = relationship('User')
+
+class EventEdit(Base):
+    __tablename__ = 'event_edits'
+
+    id             = Column(Integer, primary_key=True, nullable=False)
+    event_id       = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
+    editor_id      = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    changed_fields = Column(String, nullable=False)  # simplified to text: e.g. 'time=20:00'
+    created_at     = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    event          = relationship('Event', backref='edits')
+    editor         = relationship('User')
+
+class EventReport(Base):
+    __tablename__ = 'event_reports'
+
+    id          = Column(Integer, primary_key=True, nullable=False)
+    event_id    = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
+    reporter_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    reason      = Column(report_reason, nullable=False)
+    comment     = Column(String, nullable=True)
+    handled     = Column(Boolean, nullable=False, server_default='FALSE')
+    created_at  = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    event       = relationship('Event', backref='reports')
+    reporter    = relationship('User')
 
 
 class ChatSession(Base):

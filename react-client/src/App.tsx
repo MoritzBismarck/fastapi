@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Events from './pages/Events';
 import LikedEvents from './pages/LikedEvents';
+import ChatRoom from './pages/ChatRoom';
 // import CreateEvent from './pages/CreateEvent';
 import EventDetail from './pages/EventDetail'; // We'll create this next
 import DesignTest from './pages/DesignTest';
@@ -104,6 +105,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/chat" element={<ChatRoom />} />
             </Routes>
           </div>
         </BrowserRouter>

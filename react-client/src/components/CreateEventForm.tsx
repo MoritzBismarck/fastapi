@@ -17,8 +17,9 @@ type FormData = {
   start_time?: string;
   end_date?: string;
   end_time?: string;
-  place: string;
+  location: string;  // Changed from 'place' to 'location' (string)
   cover?: FileList;
+  guest_limit?: number;  // Add optional guest limit
 };
 
 const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCancel }) => {
@@ -88,14 +89,16 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
 
       // 2) Build payload
       const payload = {
-        title:       data.title,
+        title: data.title,
         description: data.description,
-        start_date:  data.start_date,
-        start_time:  data.start_time,
-        end_date:    showEnd ? data.end_date : undefined,
-        end_time:    showEnd ? data.end_time : undefined,
-        place:       data.place,
-        image_url,
+        start_date: data.start_date,
+        start_time: data.start_time,
+        end_date: showEnd ? data.end_date : undefined,
+        end_time: showEnd ? data.end_time : undefined,
+        location: data.location,  // Changed from 'place' to 'location'
+        cover_photo_url: image_url,  // Assign the uploaded image URL
+        guest_limit: data.guest_limit ? Number(data.guest_limit) : undefined,
+        visibility: 'PUBLIC'  // Add required visibility field
       };
 
       // 3) Create event
@@ -220,17 +223,17 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
           )
         }
 
-        {/* Place */}
+        {/* Location */}
         <div>
-          <label htmlFor="place" className="block mb-1 font-bold">Location:</label>
+          <label htmlFor="location" className="block mb-1 font-bold">Location:</label>
           <input
-            id="place"
+            id="location"
             type="text"
             placeholder="Add location"
-            {...register('place', { required: true })}
+            {...register('location', { required: true })}
             className="w-full border border-gray-300 rounded px-3 py-2"
           />
-          {errors.place && <p className="text-red-500 text-xs">Required field</p>}
+          {errors.location && <p className="text-red-500 text-xs">Required field</p>}
         </div>
 
         {/* Description */}
@@ -242,6 +245,18 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
             {...register('description')}
             rows={4}
             className="w-full border border-gray-300 rounded px-3 py-2 resize-none"
+          />
+        </div>
+
+        {/* Guest Limit */}
+        <div>
+          <label htmlFor="guest_limit" className="block mb-1 font-bold">Guest Limit (Optional):</label>
+          <input
+            id="guest_limit"
+            type="number"
+            placeholder="Max number of guests"
+            {...register('guest_limit', { min: 1 })}
+            className="w-full border border-gray-300 rounded px-3 py-2"
           />
         </div>
 

@@ -30,6 +30,18 @@ const Dashboard: React.FC = () => {
         </Link>
         <p className="ml-8 mt-2">Find and connect with friends</p>
       </div>
+
+      <div className="mb-12">
+        <a 
+          href="/chat" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-xl text-blue-700 underline font-bold"
+        >
+          Support Chat
+        </a>
+        <p className="ml-8 mt-2">Anonymous 5-minute support sessions (Beta)</p>
+      </div>
       
       <hr className="border-gray-400 my-8" />
       

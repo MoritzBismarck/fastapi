@@ -114,11 +114,6 @@ class FriendsOverview(BaseModel):
     friends: List[FriendshipOverview]
 
 
-# Add to FASTAPI/app/schemas.py
-class Location(BaseModel):
-    address: str
-    lat: float
-    lng: float
 
 class EventBase(BaseModel):
     title: str
@@ -127,7 +122,7 @@ class EventBase(BaseModel):
     start_time: Optional[time] = None
     end_date: Optional[date] = None
     end_time: Optional[time] = None
-    location: Location
+    location: str
     cover_photo_url: Optional[str] = None
     guest_limit: Optional[int] = None
     rsvp_close_time: Optional[datetime] = None
