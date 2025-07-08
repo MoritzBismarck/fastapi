@@ -122,7 +122,7 @@ class EventBase(BaseModel):
     start_time: Optional[time] = None
     end_date: Optional[date] = None
     end_time: Optional[time] = None
-    location: str
+    location: str  # Changed from JSON to str to match current router usage
     cover_photo_url: Optional[str] = None
     guest_limit: Optional[int] = None
     rsvp_close_time: Optional[datetime] = None
@@ -137,11 +137,31 @@ class EventCreate(EventBase):
 class EventResponse(EventBase):
     id: int
     creator_id: int
+    interested_count: int = 0
+    going_count: int = 0
+    status: str = 'ACTIVE'
     created_at: datetime
+    updated_at: datetime
+    last_edited_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
+class CreatorInfo(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class EventWithLikedUsers(EventResponse):
+    liked_by_current_user: bool = False
+    liked_by_friends: List[UserOut] = []
+    creator: Optional[CreatorInfo] = None
+    
+    class Config:
+        from_attributes = True
 
 class EventLikeResponse(BaseModel):
     user_id: int
@@ -151,12 +171,22 @@ class EventLikeResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-class CreatorInfo(BaseModel):
+class MatchResponse(BaseModel):
     id: int
-    username: str
-    profile_picture: Optional[str] = None
+    event_id: int
+    context: str
+    created_at: datetime
+    last_message_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
 
+class MatchParticipantResponse(BaseModel):
+    match_id: int
+    user_id: int
+    joined_at: datetime
+    unread_count: int = 0
+    
     class Config:
         from_attributes = True
 

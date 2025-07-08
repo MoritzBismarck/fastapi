@@ -4,13 +4,13 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 from datetime import datetime
 from enum import Enum as PyEnum
+from sqlalchemy.dialects.postgresql import ENUM
 
 # Enums for controlled vocabularies
-event_visibility = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='event_visibility')
-event_status     = Enum('ACTIVE', 'CANCELLED', 'DELETED', name='event_status')
-rsvp_status      = Enum('INTERESTED', 'GOING', 'CANCELLED', name='rsvp_status')
-match_context    = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='match_context')
-report_reason    = Enum('SPAM', 'FAKE', 'HARASSMENT', name='report_reason')
+event_visibility = ENUM('PUBLIC', 'PRIVATE', 'FRIENDS', name='event_visibility', create_type=False)
+event_status     = ENUM('ACTIVE', 'CANCELLED', 'DELETED', name='event_status', create_type=False)
+rsvp_status      = ENUM('INTERESTED', 'GOING', 'CANCELLED', name='rsvp_status', create_type=False)
+match_context    = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='match_context', create_type=False)
 
 
 class Post(Base):
@@ -213,20 +213,6 @@ class EventEdit(Base):
     event          = relationship('Event', backref='edits')
     editor         = relationship('User')
 
-class EventReport(Base):
-    __tablename__ = 'event_reports'
-
-    id          = Column(Integer, primary_key=True, nullable=False)
-    event_id    = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
-    reporter_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    reason      = Column(report_reason, nullable=False)
-    comment     = Column(String, nullable=True)
-    handled     = Column(Boolean, nullable=False, server_default='FALSE')
-    created_at  = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
-
-    event       = relationship('Event', backref='reports')
-    reporter    = relationship('User')
-
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
@@ -244,5 +230,6 @@ class ChatSession(Base):
     helpseeker = relationship("User", foreign_keys=[helpseeker_id])
 
 User.created_events = relationship('Event', back_populates='creator')
-
-
+User.likes          = relationship('EventLike', back_populates='user')
+User.rsvps          = relationship('RSVP', back_populates='user')
+User.matches        = relationship('MatchParticipant', back_populates='user')

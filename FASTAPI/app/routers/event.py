@@ -24,16 +24,32 @@ def create_event(
 ):
     # Map Pydantic data to SQLAlchemy model
     event_data = event.model_dump()
-    # Ensure nested location is stored as dict
-    event_data['location'] = event_data['location']
-    # Use creator_id (matches model) instead of created_by
+    
+    # Remove creator_id from event_data if it exists (we'll set it manually)
+    event_data.pop('creator_id', None)
+    
+    # Create the event
     new_event = models.Event(
         **event_data,
         creator_id=current_user.id
     )
+    
     db.add(new_event)
     db.commit()
     db.refresh(new_event)
+    
+    # Automatically create a like for PRIVATE events (creator always likes their own private events)
+    if current_user.is_public == 'FALSE':
+        creator_like = models.EventLike(
+            user_id=current_user.id,
+            event_id=new_event.id
+        )
+        db.add(creator_like)
+        db.commit()
+        
+        # Note: No need to call NotificationService.notify_event_match here
+        # since it's the creator liking their own event
+    
     return new_event
 
 @router.post("/{event_id}/image", status_code=status.HTTP_200_OK, response_model=schemas.EventResponse)
@@ -110,7 +126,7 @@ async def upload_file_endpoint(file: UploadFile = File(...), db: Session = Depen
     return {"file_url": file_url}
 
 
-@router.get("", response_model=List[schemas.EventWithLikedUsers])  # Change response_model from EventResponse to EventWithLikedUsers
+@router.get("", response_model=List[schemas.EventWithLikedUsers])
 def get_events(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -123,6 +139,9 @@ def get_events(
     # Base query for events
     query = db.query(models.Event)
     
+    # Filter out events that aren't active
+    query = query.filter(models.Event.status == 'ACTIVE')
+    
     if exclude_liked:
         # Get IDs of events already liked by current user
         liked_event_ids = db.query(models.EventLike.event_id).filter(
@@ -130,24 +149,8 @@ def get_events(
         ).scalar_subquery()
         query = query.filter(models.Event.id.notin_(liked_event_ids))
     
-    # Filter by date range if provided
-    if from_date:
-        query = query.filter(models.Event.start_date >= from_date)
-    if to_date:
-        query = query.filter(
-            or_(
-                models.Event.end_date <= to_date,
-                and_(
-                    models.Event.end_date.is_(None),
-                    models.Event.start_date <= to_date
-                )
-            )
-        )
-    
-    # Get events with pagination, sorted by start_date
-    events = query.order_by(models.Event.start_date).offset(skip).limit(limit).all()
-    
-    # NEW CODE: Get friend IDs for the current user
+    # Filter by visibility - only show PUBLIC events and PRIVATE events from friends
+    # Get friend IDs first for PRIVATE event filtering
     friend_ids = []
     
     # Get friendships where user is requester
@@ -157,8 +160,6 @@ def get_events(
             models.Friendship.status == "accepted"
         )
     ).all()
-    
-    # Add addressee IDs to friend_ids
     friend_ids.extend([f.addressee_id for f in requester_friendships])
     
     # Get friendships where user is addressee
@@ -168,11 +169,41 @@ def get_events(
             models.Friendship.status == "accepted"
         )
     ).all()
-    
-    # Add requester IDs to friend_ids
     friend_ids.extend([f.requester_id for f in addressee_friendships])
     
-    # NEW CODE: For each event, get friends who liked it
+    # Filter events by visibility
+    query = query.filter(
+        or_(
+            models.Event.visibility == 'PUBLIC',
+            and_(
+                models.Event.visibility == 'PRIVATE',
+                models.Event.creator_id.in_(friend_ids + [current_user.id])  # Include user's own private events
+            ),
+            and_(
+                models.Event.visibility == 'FRIENDS',
+                models.Event.creator_id.in_(friend_ids + [current_user.id])
+            )
+        )
+    )
+    
+    # Filter by date range if provided
+    if from_date:
+        query = query.filter(models.Event.start_date >= from_date.date())
+    if to_date:
+        query = query.filter(
+            or_(
+                models.Event.end_date <= to_date.date(),
+                and_(
+                    models.Event.end_date.is_(None),
+                    models.Event.start_date <= to_date.date()
+                )
+            )
+        )
+    
+    # Get events with pagination, sorted by start_date
+    events = query.order_by(models.Event.start_date).offset(skip).limit(limit).all()
+    
+    # For each event, get friends who liked it and creator info
     result = []
     for event in events:
         # Get users who have liked this event and are friends with current user
@@ -194,7 +225,18 @@ def get_events(
             )
         ).first() is not None
         
+        # Get creator info
+        creator = db.query(models.User).filter(models.User.id == event.creator_id).first()
+        creator_info = None
+        if creator:
+            creator_info = {
+                "id": creator.id,
+                "username": creator.username,
+                "profile_picture": creator.profile_picture
+            }
+        
         # Create result dictionary with event and additional fields
+        # Fixed field mapping to match your actual model
         event_dict = {
             "id": event.id,
             "title": event.title,
@@ -203,12 +245,21 @@ def get_events(
             "end_date": event.end_date,
             "start_time": event.start_time,
             "end_time": event.end_time,
-            "place": event.place,
-            "image_url": event.image_url,
+            "location": event.location,  # Fixed: use 'location' not 'place'
+            "cover_photo_url": event.cover_photo_url,  # Fixed: use 'cover_photo_url' not 'image_url'
+            "guest_limit": event.guest_limit,
+            "rsvp_close_time": event.rsvp_close_time,
+            "visibility": event.visibility,
+            "interested_count": event.interested_count,
+            "going_count": event.going_count,
+            "status": event.status,
             "created_at": event.created_at,
-            "created_by": event.created_by,
+            "updated_at": event.updated_at,
+            "last_edited_at": event.last_edited_at,
+            "creator_id": event.creator_id,  # Fixed: use 'creator_id' not 'created_by'
             "liked_by_current_user": user_liked,
-            "liked_by_friends": friends_who_liked
+            "liked_by_friends": friends_who_liked,
+            "creator": creator_info
         }
         
         result.append(event_dict)
@@ -332,8 +383,6 @@ def get_event_detail(
             models.Friendship.status == "accepted"
         )
     ).all()
-    
-    # Add addressee IDs to friend_ids
     friend_ids.extend([f.addressee_id for f in requester_friendships])
     
     # Get friendships where user is addressee
@@ -343,8 +392,6 @@ def get_event_detail(
             models.Friendship.status == "accepted"
         )
     ).all()
-    
-    # Add requester IDs to friend_ids
     friend_ids.extend([f.requester_id for f in addressee_friendships])
     
     # Get users who have liked this event and are friends with current user
@@ -366,7 +413,7 @@ def get_event_detail(
         )
     ).first() is not None
     
-    # First convert SQLAlchemy model to dict
+    # Convert SQLAlchemy model to dict with correct field mapping
     event_dict = {
         "id": event.id,
         "title": event.title,
@@ -375,11 +422,13 @@ def get_event_detail(
         "end_date": event.end_date,
         "start_time": event.start_time,
         "end_time": event.end_time,
-        "all_day": getattr(event, "all_day", None),  # Use getattr for fields that might not exist
-        "place": event.place,
-        "image_url": event.image_url,
+        "location": event.location,  # Use 'location' not 'place'
+        "cover_photo_url": event.cover_photo_url,  # Use 'cover_photo_url' not 'image_url'
+        "guest_limit": event.guest_limit,
+        "rsvp_close_time": event.rsvp_close_time,
+        "visibility": event.visibility,
         "created_at": event.created_at,
-        "created_by": event.created_by,
+        "creator_id": event.creator_id,  # Use 'creator_id' not 'created_by'
         "liked_by_current_user": user_liked,
         "liked_by_friends": friends_who_liked
     }
@@ -439,12 +488,105 @@ def like_event(
     db.add(new_like)
     db.commit()
     
+    # Get user's friends who have also liked this event
+    friends_who_liked = get_friends_who_liked_event(db, current_user.id, id)
+    
+    # Create matches and notifications for each friend who also liked this event
+    for friend in friends_who_liked:
+        # Check if a match already exists for this event between these users
+        existing_match = db.query(models.Match).join(
+            models.MatchParticipant
+        ).filter(
+            and_(
+                models.Match.event_id == id,
+                models.MatchParticipant.user_id.in_([current_user.id, friend.id])
+            )
+        ).group_by(models.Match.id).having(
+            func.count(models.MatchParticipant.user_id) == 2
+        ).first()
+        
+        if not existing_match:
+            # Create new match
+            new_match = models.Match(
+                event_id=id,
+                context='FRIENDS'  # Set appropriate context based on event visibility
+            )
+            db.add(new_match)
+            db.commit()
+            db.refresh(new_match)
+            
+            # Add both users as participants
+            participant1 = models.MatchParticipant(
+                match_id=new_match.id,
+                user_id=current_user.id
+            )
+            participant2 = models.MatchParticipant(
+                match_id=new_match.id,
+                user_id=friend.id
+            )
+            
+            db.add(participant1)
+            db.add(participant2)
+            db.commit()
+    
     # Generate notifications for friend matches
     NotificationService.notify_event_match(db=db, user_id=current_user.id, event_id=id)
     
     return {"message": "Event liked successfully"}
 
+def get_friends_who_liked_event(db: Session, user_id: int, event_id: int):
+    """
+    Helper function to get friends of the user who have liked a specific event.
+    """
+    # Get all accepted friendships for the user
+    friendships = db.query(models.Friendship).filter(
+        and_(
+            or_(
+                models.Friendship.requester_id == user_id,
+                models.Friendship.addressee_id == user_id
+            ),
+            models.Friendship.status == "accepted"
+        )
+    ).all()
+    # Extract friend IDs
+    friend_ids = set()
+    for friendship in friendships:
+        if friendship.requester_id == user_id:
+            friend_ids.add(friendship.addressee_id)
+        else:
+            friend_ids.add(friendship.requester_id)
+    # Get friends who liked the event
+    friends_who_liked = db.query(models.User).join(
+        models.EventLike,
+        models.EventLike.user_id == models.User.id
+    ).filter(
+        and_(
+            models.EventLike.event_id == event_id,
+            models.User.id.in_(friend_ids)
+        )
+    ).all()
+    return friends_who_liked
 
+def create_event_response_dict(event, user_liked, friends_who_liked):
+    """Helper function to create consistent event response dictionaries"""
+    return {
+        "id": event.id,
+        "title": event.title,
+        "description": event.description,
+        "start_date": event.start_date,
+        "end_date": event.end_date,
+        "start_time": event.start_time,
+        "end_time": event.end_time,
+        "location": event.location,  # Use 'location' not 'place'
+        "cover_photo_url": event.cover_photo_url,  # Use 'cover_photo_url' not 'image_url'
+        "guest_limit": event.guest_limit,
+        "rsvp_close_time": event.rsvp_close_time,
+        "visibility": event.visibility,
+        "created_at": event.created_at,
+        "creator_id": event.creator_id,  # Use 'creator_id' not 'created_by'
+        "liked_by_current_user": user_liked,
+        "liked_by_friends": friends_who_liked
+    }
 
 @router.delete("/{id}/like", status_code=status.HTTP_204_NO_CONTENT)
 def unlike_event(
