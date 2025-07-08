@@ -171,7 +171,7 @@ const LikedEvents: React.FC = () => {
               {/* Event Image */}
               <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded border border-gray-300">
                 <img 
-                  src={event.image_url || '/api/placeholder/80/80'} 
+                  src={event.cover_photo_url || '/api/placeholder/80/80'} 
                   alt={event.title}
                   className="w-full h-full object-cover"
                 />

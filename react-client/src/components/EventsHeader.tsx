@@ -25,7 +25,7 @@ const EventsHeader: React.FC<EventsHeaderProps> = ({ isCreating = false, onToggl
         </NavLink>
         <span className="text-gray-400 select-none">|</span>
         <NavLink
-          to="/events/liked"
+          to="/events/matches"
           className={({ isActive }) =>
             `${isActive ? 'text-blue-700 underline' : 'text-gray-600'} hover:text-blue-700`
           }

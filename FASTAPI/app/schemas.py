@@ -240,3 +240,23 @@ class InvitationTokenOut(InvitationTokenBase):
     
     class Config:
         orm_mode = True
+
+class RSVPBase(BaseModel):
+    status: str = Field(..., pattern='^(INTERESTED|GOING|CANCELLED)$')
+
+class RSVPCreate(RSVPBase):
+    pass
+
+class RSVPResponse(RSVPBase):
+    user_id: int
+    event_id: int
+    responded_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class UserWithRSVP(UserOut):
+    rsvp_status: Optional[str] = None
+    
+    class Config:
+        from_attributes = True

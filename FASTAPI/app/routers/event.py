@@ -1,6 +1,6 @@
 # Create a new file: FASTAPI/app/routers/event.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -268,33 +268,36 @@ def get_events(
 
 # Completely new get_liked_events function in FASTAPI/app/routers/event.py
 
-@router.get("/liked", response_model=List[schemas.EventWithLikedUsers])
-def get_liked_events(
+@router.get("/matches", response_model=List[schemas.EventWithLikedUsers])
+def get_user_matches(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
     limit: int = 20,
     skip: int = 0
 ):
-    """Get events liked by the current user with creator and friend information"""
+    """Get all events that the user has matches for, sorted by event date"""
     
-    # Step 1: Get all events liked by the current user
-    liked_event_ids = db.query(models.EventLike.event_id).filter(
-        models.EventLike.user_id == current_user.id
+    # Step 1: Get all matches for the current user
+    user_matches = db.query(models.Match).join(
+        models.MatchParticipant
+    ).filter(
+        models.MatchParticipant.user_id == current_user.id
     ).subquery()
     
-    # Step 2: Get the events with their creators
+    # Step 2: Get the events from those matches with their creators
     events_with_creators = db.query(
         models.Event,
         models.User.id.label('creator_id'),
         models.User.username.label('creator_username'),
         models.User.profile_picture.label('creator_profile_picture')
     ).join(
+        user_matches,
+        models.Event.id == user_matches.c.event_id
+    ).join(
         models.User,
-        models.Event.created_by == models.User.id
-    ).filter(
-        models.Event.id.in_(liked_event_ids)
+        models.Event.creator_id == models.User.id
     ).order_by(
-        models.Event.start_date
+        models.Event.start_date.asc()  # Sort by event date ascending (upcoming events first)
     ).offset(skip).limit(limit).all()
     
     # Step 3: Get current user's friends
@@ -316,9 +319,17 @@ def get_liked_events(
         else:
             friend_ids.add(friendship.requester_id)
     
-    # Step 4: For each event, get friends who also liked it
+    # Step 4: For each event, get friends who also liked it and check if current user liked it
     results = []
     for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
+        # Check if current user liked this event
+        user_liked = db.query(models.EventLike).filter(
+            and_(
+                models.EventLike.user_id == current_user.id,
+                models.EventLike.event_id == event.id
+            )
+        ).first() is not None
+        
         # Get friends who liked this event
         friends_who_liked = []
         if friend_ids:
@@ -332,7 +343,7 @@ def get_liked_events(
                 )
             ).all()
         
-        # Create the response object
+        # Create the response object using the updated field names
         event_response = {
             "id": event.id,
             "title": event.title,
@@ -341,11 +352,19 @@ def get_liked_events(
             "end_date": event.end_date,
             "start_time": event.start_time,
             "end_time": event.end_time,
-            "place": event.place,
-            "image_url": event.image_url,
+            "location": event.location,  # Updated field name
+            "cover_photo_url": event.cover_photo_url,  # Updated field name
+            "visibility": event.visibility,
+            "status": event.status,
+            "guest_limit": event.guest_limit,
+            "rsvp_close_time": event.rsvp_close_time,
+            "interested_count": event.interested_count,
+            "going_count": event.going_count,
             "created_at": event.created_at,
-            "created_by": event.created_by,
-            "liked_by_current_user": True,  # Always true since we're fetching liked events
+            "updated_at": event.updated_at,
+            "last_edited_at": event.last_edited_at,
+            "creator_id": event.creator_id,  # Updated field name
+            "liked_by_current_user": user_liked,
             "liked_by_friends": friends_who_liked,
             "creator": {
                 "id": creator_id,
@@ -353,7 +372,6 @@ def get_liked_events(
                 "profile_picture": creator_profile_picture
             }
         }
-        
         results.append(event_response)
     
     return results
@@ -615,3 +633,164 @@ def unlike_event(
     db.commit()
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{event_id}/rsvp", response_model=schemas.RSVPResponse, status_code=status.HTTP_201_CREATED)
+def rsvp_to_event(
+    event_id: int,
+    rsvp_data: schemas.RSVPCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """RSVP to an event (INTERESTED, GOING, or CANCELLED)"""
+    
+    # Check if event exists
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found"
+        )
+    
+    # Check if user already has an RSVP for this event
+    existing_rsvp = db.query(models.RSVP).filter(
+        and_(
+            models.RSVP.user_id == current_user.id,
+            models.RSVP.event_id == event_id
+        )
+    ).first()
+    
+    if existing_rsvp:
+        # Update existing RSVP
+        existing_rsvp.status = rsvp_data.status
+        existing_rsvp.responded_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing_rsvp)
+        
+        # Update event counts
+        update_event_rsvp_counts(db, event_id)
+        
+        return existing_rsvp
+    else:
+        # Create new RSVP
+        new_rsvp = models.RSVP(
+            user_id=current_user.id,
+            event_id=event_id,
+            status=rsvp_data.status
+        )
+        
+        db.add(new_rsvp)
+        db.commit()
+        db.refresh(new_rsvp)
+        
+        # Update event counts
+        update_event_rsvp_counts(db, event_id)
+        
+        return new_rsvp
+
+@router.delete("/{event_id}/rsvp", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_rsvp(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Cancel/remove RSVP for an event"""
+    
+    # Find existing RSVP
+    rsvp = db.query(models.RSVP).filter(
+        and_(
+            models.RSVP.user_id == current_user.id,
+            models.RSVP.event_id == event_id
+        )
+    ).first()
+    
+    if not rsvp:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="RSVP not found"
+        )
+    
+    # Delete the RSVP
+    db.delete(rsvp)
+    db.commit()
+    
+    # Update event counts
+    update_event_rsvp_counts(db, event_id)
+    
+    return
+
+@router.get("/{event_id}/rsvps", response_model=List[schemas.UserWithRSVP])
+def get_event_rsvps(
+    event_id: int,
+    status_filter: Optional[str] = Query(None, regex="^(INTERESTED|GOING|CANCELLED)$"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Get all RSVPs for an event, optionally filtered by status"""
+    
+    # Check if event exists
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found"
+        )
+    
+    # Base query
+    query = db.query(models.User, models.RSVP.status.label('rsvp_status')).join(
+        models.RSVP,
+        models.RSVP.user_id == models.User.id
+    ).filter(
+        models.RSVP.event_id == event_id
+    )
+    
+    # Apply status filter if provided
+    if status_filter:
+        query = query.filter(models.RSVP.status == status_filter)
+    
+    # Execute query
+    results = query.all()
+    
+    # Format results
+    users_with_rsvp = []
+    for user, rsvp_status in results:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "profile_picture": user.profile_picture,
+            "created_at": user.created_at,
+            "rsvp_status": rsvp_status
+        }
+        users_with_rsvp.append(user_dict)
+    
+    return users_with_rsvp
+
+def update_event_rsvp_counts(db: Session, event_id: int):
+    """Helper function to update event RSVP counts"""
+    
+    # Count interested users
+    interested_count = db.query(models.RSVP).filter(
+        and_(
+            models.RSVP.event_id == event_id,
+            models.RSVP.status == 'INTERESTED'
+        )
+    ).count()
+    
+    # Count going users
+    going_count = db.query(models.RSVP).filter(
+        and_(
+            models.RSVP.event_id == event_id,
+            models.RSVP.status == 'GOING'
+        )
+    ).count()
+    
+    # Update event counts
+    db.query(models.Event).filter(models.Event.id == event_id).update({
+        'interested_count': interested_count,
+        'going_count': going_count
+    })
+    
+    db.commit()

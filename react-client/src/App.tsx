@@ -17,6 +17,7 @@ import EventDetail from './pages/EventDetail'; // We'll create this next
 import DesignTest from './pages/DesignTest';
 import InvitationManager from './pages/InvitationManager';
 import Signup from './pages/Signup';
+import MatchedEvents from './pages/MatchedEvents';
 
 const App: React.FC = () => {
   return (
@@ -62,6 +63,14 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <Events initialCreating={true} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/events/matches" 
+                element={
+                  <ProtectedRoute>
+                    <MatchedEvents />
                   </ProtectedRoute>
                 }
               />

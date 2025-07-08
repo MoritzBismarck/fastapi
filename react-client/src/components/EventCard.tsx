@@ -22,13 +22,35 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
     console.log('User clicked:', user);
   };
 
+  // Format date and time for display
+  const formatDateTime = () => {
+    const date = new Date(event.start_date);
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).replace(',', '');
+
+    if (event.start_time) {
+      let timeStr = event.start_time;
+      if (event.end_time) {
+        timeStr += ` – ${event.end_time}`;
+      }
+      return { date: dateStr, time: timeStr };
+    }
+    
+    return { date: dateStr, time: 'All day' };
+  };
+
+  const { date, time } = formatDateTime();
+
   return (
     <div className="max-w-sm mx-auto bg-[#C5C5C5] rounded-3xl p-3 shadow-lg border-black border-2">
       <div className="rounded-2xl overflow-hidden border-2 border-gray-200 bg-black">
         {/* MAIN IMAGE AREA */}
         <div className="relative">
           <img 
-            src={event.image_url || '/placeholder.jpg'} 
+            src={event.cover_photo_url || '/placeholder.jpg'} 
             alt={event.title}
             className="w-full aspect-[3/4] object-cover"
           />
@@ -46,18 +68,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
           {/* DATE/TIME OVERLAY */}
           <div className="absolute top-4 right-4 text-right">
             <div className="text-white font-mono text-sm">
-              {new Date(event.start_date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              }).replace(',', '')}
+              {date}
               <br />
-              {event.start_time && (
-                <span>
-                  {event.start_time}
-                  {event.end_time && ` – ${event.end_time}`}
-                </span>
-              )}
+              {time}
             </div>
           </div>
           
@@ -69,6 +82,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
                 <h2 className="text-white text-xl font-bold mb-1">
                   {event.title}
                 </h2>
+                <p className="text-white text-sm mb-2">
+                  📍 {event.location}
+                </p>
                 {event.description && (
                   <p className="text-white text-sm line-clamp-2">
                     {event.description}
@@ -79,16 +95,37 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
               /* DETAILS VIEW */
               <div className="text-white">
                 <div className="mb-2">
-                  <div className="font-bold text-sm uppercase">Location:</div>
-                  <div>{event.place}</div>
+                  <div className="font-bold text-sm uppercase">Title:</div>
+                  <div className="text-lg font-bold">{event.title}</div>
                 </div>
                 
-                <div>
+                <div className="mb-2">
+                  <div className="font-bold text-sm uppercase">When:</div>
+                  <div>{date}</div>
+                  <div>{time}</div>
+                </div>
+                
+                <div className="mb-2">
+                  <div className="font-bold text-sm uppercase">Location:</div>
+                  <div>{event.location}</div>
+                </div>
+                
+                <div className="mb-2">
                   <div className="font-bold text-sm uppercase">About:</div>
                   <p className="text-sm whitespace-pre-line">
                     {event.description}
                   </p>
                 </div>
+
+                {/* Show guest info if available */}
+                {(event.interested_count > 0 || event.going_count > 0) && (
+                  <div className="mb-2">
+                    <div className="font-bold text-sm uppercase">Interest:</div>
+                    <div className="text-sm">
+                      {event.going_count} going, {event.interested_count} interested
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -114,7 +151,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
           className="w-20 h-6 bg-[#A8A8A8] border-2 border-t-white border-l-white border-b-[#666] border-r-[#666] rounded-md flex items-center justify-center shadow-md active:translate-y-[1px] active:shadow-sm transition-all"
         >
           <span className="text-gray-700 text-sm font-medium">
-            Details
+            {isShowingDetails ? 'Back' : 'Details'}
           </span>
         </button>
         

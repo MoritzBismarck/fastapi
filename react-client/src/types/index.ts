@@ -34,13 +34,22 @@ export interface User {
     end_date?: string;
     start_time?: string;
     end_time?: string;
-    all_day: boolean;
-    place: string;
-    image_url?: string;
+    all_day?: boolean;
+    location: string; // Changed from 'place' to match backend
+    cover_photo_url?: string; // Changed from 'image_url' to match backend
+    visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+    status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+    guest_limit?: number;
+    rsvp_close_time?: string;
+    interested_count: number;
+    going_count: number;
     created_at: string;
-    created_by: number;
+    updated_at: string;
+    last_edited_at?: string;
+    creator_id: number; // Changed from 'created_by' to match backend
+    creator?: CreatorInfo;
     liked_by_friends?: User[];
-    creator?: CreatorInfo; // Add creator information
+    liked_by_current_user?: boolean;
   }
   
   export interface Notification {
