@@ -94,27 +94,33 @@ def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oau
 
 @router.get("/overview", response_model=schemas.FriendsOverview)
 def get_users_overview(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), 
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    # Fetch all users except the current user
-    users = db.query(models.User).filter(models.User.id != current_user.id).all()
+    # Get all users EXCEPT public users and the current user
+    users = db.query(models.User).filter(
+        and_(
+            models.User.id != current_user.id,
+            models.User.is_public == False  # ADD THIS LINE - exclude public users
+        )
+    ).all()
     
-    # Fetch all friendship records involving the current user
+    # Get all friendships involving the current user
     friendships = db.query(models.Friendship).filter(
         or_(
             models.Friendship.requester_id == current_user.id,
             models.Friendship.addressee_id == current_user.id
         )
     ).all()
-
+    
+    # Process users to determine their relationship with current user
     processed_users = []
     for user in users:
-        # Check for ANY friendship involving this user and current user
+        # Find any friendship involving this user and current user
         friendship = next(
             (
                 f for f in friendships 
-                if (f.requester_id == current_user.id and f.addressee_id == user.id) or
+                if (f.requester_id == current_user.id and f.addressee_id == user.id) or 
                 (f.requester_id == user.id and f.addressee_id == current_user.id)
             ),
             None
@@ -171,47 +177,26 @@ def get_users_overview(
     established_friendships = []
     for f in friendships:
         if f.status == "accepted":
-            # Get the friend (the other user in this friendship)
+            # Get the friend user (the one who isn't the current user)
             friend_id = f.addressee_id if f.requester_id == current_user.id else f.requester_id
             friend = db.query(models.User).filter(models.User.id == friend_id).first()
             
-            # Convert User object to dictionary
-            friend_dict = {
-                "id": friend.id,
-                "username": friend.username or f"User {friend.id}",
-                "email": friend.email
-            }
-            
-            established_friendships.append({
-                "id": f.id,
-                "friend": friend_dict,  # Use the dictionary instead of the User object
-                "status": f.status
-            })
-
-    if current_user.invitation_token_id:
-        # Prioritize users who registered with the same invitation token
-        same_token_users = db.query(models.User).filter(
-            and_(
-                models.User.invitation_token_id == current_user.invitation_token_id,
-                models.User.id != current_user.id
-            )
-        ).all()
-        
-        # Add a "recommended" flag to users who shared the same token
-        token_user_ids = {user.id for user in same_token_users}
-        
-        # Tag users as recommended in the processed_users list
-        for user_data in processed_users:
-            user_data["recommended"] = user_data["id"] in token_user_ids
-            
-        # Move recommended users to the top of the list
-        processed_users.sort(key=lambda u: (not u.get("recommended"), u["relationship"] != "request_received", u["username"]))
+            if friend:
+                established_friendships.append({
+                    "id": f.id,
+                    "friend": {
+                        "id": friend.id,
+                        "username": friend.username,
+                        "email": friend.email,
+                        "profile_picture": friend.profile_picture
+                    },
+                    "status": f.status
+                })
     
     return {
         "users": processed_users,
         "friends": established_friendships
     }
-
 # Update in FASTAPI/app/routers/user.py
 
 @router.post("/{token}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
