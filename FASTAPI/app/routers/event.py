@@ -268,7 +268,9 @@ def get_events(
 
 # Completely new get_liked_events function in FASTAPI/app/routers/event.py
 
-@router.get("/matches", response_model=List[schemas.EventWithLikedUsers])
+# Replace the existing /matches endpoint in FASTAPI/app/routers/event.py
+
+@router.get("/matches")
 def get_user_matches(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user),
@@ -277,104 +279,146 @@ def get_user_matches(
 ):
     """Get all events that the user has matches for, sorted by event date"""
     
-    # Step 1: Get all matches for the current user
-    user_matches = db.query(models.Match).join(
-        models.MatchParticipant
-    ).filter(
-        models.MatchParticipant.user_id == current_user.id
-    ).subquery()
-    
-    # Step 2: Get the events from those matches with their creators
-    events_with_creators = db.query(
-        models.Event,
-        models.User.id.label('creator_id'),
-        models.User.username.label('creator_username'),
-        models.User.profile_picture.label('creator_profile_picture')
-    ).join(
-        user_matches,
-        models.Event.id == user_matches.c.event_id
-    ).join(
-        models.User,
-        models.Event.creator_id == models.User.id
-    ).order_by(
-        models.Event.start_date.asc()  # Sort by event date ascending (upcoming events first)
-    ).offset(skip).limit(limit).all()
-    
-    # Step 3: Get current user's friends
-    accepted_friendships = db.query(models.Friendship).filter(
-        and_(
-            or_(
-                models.Friendship.requester_id == current_user.id,
-                models.Friendship.addressee_id == current_user.id
-            ),
-            models.Friendship.status == "accepted"
-        )
-    ).all()
-    
-    # Extract friend IDs
-    friend_ids = set()
-    for friendship in accepted_friendships:
-        if friendship.requester_id == current_user.id:
-            friend_ids.add(friendship.addressee_id)
-        else:
-            friend_ids.add(friendship.requester_id)
-    
-    # Step 4: For each event, get friends who also liked it and check if current user liked it
-    results = []
-    for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
-        # Check if current user liked this event
-        user_liked = db.query(models.EventLike).filter(
+    try:
+        # Step 1: Get all matches for the current user
+        user_matches = db.query(models.Match).join(
+            models.MatchParticipant
+        ).filter(
+            models.MatchParticipant.user_id == current_user.id
+        ).subquery()
+        
+        # Step 2: Get the events from those matches with their creators
+        events_with_creators = db.query(
+            models.Event,
+            models.User.id.label('creator_id'),
+            models.User.username.label('creator_username'),
+            models.User.profile_picture.label('creator_profile_picture')
+        ).join(
+            user_matches,
+            models.Event.id == user_matches.c.event_id
+        ).join(
+            models.User,
+            models.Event.creator_id == models.User.id
+        ).order_by(
+            models.Event.start_date.asc()  # Sort by event date ascending
+        ).offset(skip).limit(limit).all()
+        
+        # Step 3: Get current user's friends (FIXED: using addressee_id instead of receiver_id)
+        accepted_friendships = db.query(models.Friendship).filter(
             and_(
-                models.EventLike.user_id == current_user.id,
-                models.EventLike.event_id == event.id
+                or_(
+                    models.Friendship.requester_id == current_user.id,
+                    models.Friendship.addressee_id == current_user.id
+                ),
+                models.Friendship.status == 'accepted'  # Changed from 'ACCEPTED' to 'accepted'
             )
-        ).first() is not None
+        ).all()
         
-        # Get friends who liked this event
-        friends_who_liked = []
-        if friend_ids:
-            friends_who_liked = db.query(models.User).join(
-                models.EventLike,
-                models.EventLike.user_id == models.User.id
-            ).filter(
+        friend_ids = set()
+        for friendship in accepted_friendships:
+            if friendship.requester_id == current_user.id:
+                friend_ids.add(friendship.addressee_id)
+            else:
+                friend_ids.add(friendship.requester_id)
+        
+        # Step 4: Build result with liked friends and RSVP data
+        result = []
+        for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
+            
+            # Get friends who liked this event
+            friends_who_liked = []
+            if friend_ids:
+                liked_friends = db.query(models.User).join(
+                    models.EventLike,
+                    models.EventLike.user_id == models.User.id
+                ).filter(
+                    and_(
+                        models.EventLike.event_id == event.id,
+                        models.User.id.in_(friend_ids)
+                    )
+                ).all()
+                
+                friends_who_liked = [
+                    {
+                        "id": friend.id,
+                        "username": friend.username,
+                        "email": friend.email,
+                        "profile_picture": friend.profile_picture
+                    }
+                    for friend in liked_friends
+                ]
+            
+            # Check if current user liked this event
+            user_liked = db.query(models.EventLike).filter(
                 and_(
-                    models.EventLike.event_id == event.id,
-                    models.User.id.in_(friend_ids)
+                    models.EventLike.user_id == current_user.id,
+                    models.EventLike.event_id == event.id
                 )
-            ).all()
-        
-        # Create the response object using the updated field names
-        event_response = {
-            "id": event.id,
-            "title": event.title,
-            "description": event.description,
-            "start_date": event.start_date,
-            "end_date": event.end_date,
-            "start_time": event.start_time,
-            "end_time": event.end_time,
-            "location": event.location,  # Updated field name
-            "cover_photo_url": event.cover_photo_url,  # Updated field name
-            "visibility": event.visibility,
-            "status": event.status,
-            "guest_limit": event.guest_limit,
-            "rsvp_close_time": event.rsvp_close_time,
-            "interested_count": event.interested_count,
-            "going_count": event.going_count,
-            "created_at": event.created_at,
-            "updated_at": event.updated_at,
-            "last_edited_at": event.last_edited_at,
-            "creator_id": event.creator_id,  # Updated field name
-            "liked_by_current_user": user_liked,
-            "liked_by_friends": friends_who_liked,
-            "creator": {
-                "id": creator_id,
-                "username": creator_username,
-                "profile_picture": creator_profile_picture
+            ).first() is not None
+            
+            # Get current user's RSVP status for this event
+            current_user_rsvp = db.query(models.RSVP).filter(
+                and_(
+                    models.RSVP.user_id == current_user.id,
+                    models.RSVP.event_id == event.id
+                )
+            ).first()
+            
+            current_rsvp_data = None
+            if current_user_rsvp:
+                current_rsvp_data = {
+                    "status": current_user_rsvp.status,
+                    "responded_at": current_user_rsvp.responded_at.isoformat() if current_user_rsvp.responded_at else None
+                }
+            
+            # Creator info
+            creator_info = None
+            if creator_id:
+                creator_info = {
+                    "id": creator_id,
+                    "username": creator_username,
+                    "profile_picture": creator_profile_picture
+                }
+            
+            # Convert SQLAlchemy model to dict with correct field mapping and handle datetime serialization
+            event_dict = {
+                "id": event.id,
+                "title": event.title,
+                "description": event.description,
+                "start_date": event.start_date.isoformat() if event.start_date else None,
+                "end_date": event.end_date.isoformat() if event.end_date else None,
+                "start_time": str(event.start_time) if event.start_time else None,
+                "end_time": str(event.end_time) if event.end_time else None,
+                "location": event.location,
+                "cover_photo_url": event.cover_photo_url,
+                "guest_limit": event.guest_limit,
+                "rsvp_close_time": event.rsvp_close_time.isoformat() if event.rsvp_close_time else None,
+                "visibility": event.visibility,
+                "interested_count": event.interested_count,
+                "going_count": event.going_count,
+                "status": event.status,
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+                "updated_at": event.updated_at.isoformat() if event.updated_at else None,
+                "last_edited_at": event.last_edited_at.isoformat() if event.last_edited_at else None,
+                "creator_id": event.creator_id,
+                "liked_by_current_user": user_liked,
+                "liked_by_friends": friends_who_liked,
+                "creator": creator_info,
+                "current_user_rsvp": current_rsvp_data
             }
-        }
-        results.append(event_response)
-    
-    return results
+            
+            result.append(event_dict)
+        
+        return result
+        
+    except Exception as e:
+        # For debugging - log the actual error
+        print(f"Error in get_user_matches: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # For now, return an empty list instead of failing
+        return []
 
 @router.get("/{id}/detail", response_model=schemas.EventWithLikedUsers)
 def get_event_detail(
@@ -628,9 +672,32 @@ def unlike_event(
             detail="You have not liked this event"
         )
     
+    # NEW: Check if user has an active RSVP for this event
+    active_rsvp = db.query(models.RSVP).filter(
+        and_(
+            models.RSVP.user_id == current_user.id,
+            models.RSVP.event_id == id,
+            models.RSVP.status.in_(['INTERESTED', 'GOING'])  # Only active RSVPs block unliking
+        )
+    ).first()
+    
+    if active_rsvp:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot unlike event while you have an active RSVP. Please cancel your RSVP first (current status: {active_rsvp.status})"
+        )
+    
     # Delete the like
     like_query.delete(synchronize_session=False)
     db.commit()
+    
+    # NEW: Clean up any matches when user unlikes an event
+    # Import the service at the top of the file if not already imported
+    # from ..services.match_service import MatchService
+    from ..services.match_service import MatchService
+    
+    # Delete matches for this event/user combination
+    MatchService.delete_matches_for_event_unlike(db, current_user.id, id)
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

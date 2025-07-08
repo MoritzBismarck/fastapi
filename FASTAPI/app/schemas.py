@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date, time
 from typing import List, Optional, Annotated
+from enum import Enum
 
 # My pydantic models
 
@@ -155,11 +156,46 @@ class CreatorInfo(BaseModel):
     class Config:
         from_attributes = True
 
-class EventWithLikedUsers(EventResponse):
-    liked_by_current_user: bool = False
-    liked_by_friends: List[UserOut] = []
+class RSVPStatus(str, Enum):
+    INTERESTED = "INTERESTED"
+    GOING = "GOING"
+    CANCELLED = "CANCELLED"
+
+class UserRSVPInfo(BaseModel):
+    status: RSVPStatus
+    responded_at: datetime
+
+class UserBase(BaseModel):
+    id: int
+    username: str
+    email: str
+    profile_picture: Optional[str] = None
+
+class EventWithLikedUsers(BaseModel):
+    id: int
+    title: str
+    description: str
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    location: str
+    cover_photo_url: Optional[str] = None
+    guest_limit: Optional[int] = None
+    rsvp_close_time: Optional[datetime] = None
+    visibility: str
+    interested_count: int = 0
+    going_count: int = 0
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    last_edited_at: Optional[datetime] = None
+    creator_id: int
+    liked_by_current_user: bool
+    liked_by_friends: List[UserBase]
     creator: Optional[CreatorInfo] = None
-    
+    current_user_rsvp: Optional[UserRSVPInfo] = None  # NEW: Current user's RSVP status
+
     class Config:
         from_attributes = True
 
