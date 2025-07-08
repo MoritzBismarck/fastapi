@@ -29,7 +29,7 @@ export const getLikedEvents = async (
   return getRequest<Event[]>(`/events/liked?${query}`);
 };
 
-// NEW: Get events that the user has matches for
+// Get events that the user has matches for
 export const getMatchedEvents = async (
   limit: number = 20,
   skip: number = 0
@@ -52,17 +52,17 @@ export const unlikeEvent = async (eventId: number): Promise<void> => {
   return del(`/events/${eventId}/like`);
 };
 
-// NEW: RSVP to an event
-export const rsvpToEvent = async (eventId: number, status: 'INTERESTED' | 'GOING' | 'CANCELLED'): Promise<void> => {
+// RSVP to an event - UPDATED: Remove INTERESTED option
+export const rsvpToEvent = async (eventId: number, status: 'GOING' | 'CANCELLED'): Promise<void> => {
   return post(`/events/${eventId}/rsvp`, { status });
 };
 
-// NEW: Cancel RSVP
+// Cancel RSVP
 export const cancelRSVP = async (eventId: number): Promise<void> => {
   return del(`/events/${eventId}/rsvp`);
 };
 
-// NEW: Get RSVPs for an event
+// Get RSVPs for an event
 export const getEventRSVPs = async (eventId: number, statusFilter?: string): Promise<any[]> => {
   const query = statusFilter ? `?status_filter=${statusFilter}` : '';
   return getRequest<any[]>(`/events/${eventId}/rsvps${query}`);

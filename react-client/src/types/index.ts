@@ -26,31 +26,38 @@ export interface User {
     profile_picture?: string;
   }
   
-  export interface Event {
+ export interface Event {
+  id: number;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location: string;
+  cover_photo_url?: string;
+  guest_limit?: number;
+  rsvp_close_time?: string;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+  creator_id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  last_edited_at?: string;
+  interested_count: number;
+  going_count: number;
+  liked_by_current_user?: boolean;
+  liked_by_friends?: User[];
+  creator?: {
     id: number;
-    title: string;
-    description: string;
-    start_date: string;
-    end_date?: string;
-    start_time?: string;
-    end_time?: string;
-    all_day?: boolean;
-    location: string; // Changed from 'place' to match backend
-    cover_photo_url?: string; // Changed from 'image_url' to match backend
-    visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
-    status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
-    guest_limit?: number;
-    rsvp_close_time?: string;
-    interested_count: number;
-    going_count: number;
-    created_at: string;
-    updated_at: string;
-    last_edited_at?: string;
-    creator_id: number; // Changed from 'created_by' to match backend
-    creator?: CreatorInfo;
-    liked_by_friends?: User[];
-    liked_by_current_user?: boolean;
-  }
+    username: string;
+    profile_picture?: string;
+  };
+  current_user_rsvp?: {
+    status: 'GOING' | 'CANCELLED';  // Remove 'INTERESTED'
+    responded_at: string;
+  };
+}
   
   export interface Notification {
     id: number;
@@ -67,4 +74,13 @@ export interface User {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+}
+
+export type RSVPStatus = 'GOING' | 'CANCELLED';  // Remove 'INTERESTED'
+
+export interface RSVP {
+  user_id: number;
+  event_id: number;
+  status: RSVPStatus;
+  responded_at: string;
 }

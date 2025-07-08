@@ -251,6 +251,8 @@ def create_user(
     # Hash the password
     hashed_password = utils.hash(user.password)
     user_data["password"] = hashed_password
+
+    user_data["is_public"] = False
     
     # Create the user
     new_user = models.User(**user_data)

@@ -157,7 +157,6 @@ class CreatorInfo(BaseModel):
         from_attributes = True
 
 class RSVPStatus(str, Enum):
-    INTERESTED = "INTERESTED"
     GOING = "GOING"
     CANCELLED = "CANCELLED"
 
@@ -278,7 +277,7 @@ class InvitationTokenOut(InvitationTokenBase):
         orm_mode = True
 
 class RSVPBase(BaseModel):
-    status: str = Field(..., pattern='^(INTERESTED|GOING|CANCELLED)$')
+    status: str = Field(..., pattern='^(GOING|CANCELLED)$')
 
 class RSVPCreate(RSVPBase):
     pass

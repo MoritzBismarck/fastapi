@@ -672,12 +672,13 @@ def unlike_event(
             detail="You have not liked this event"
         )
     
-    # NEW: Check if user has an active RSVP for this event
+    # UPDATED: Check if user has an active RSVP for this event
+    # Now only GOING blocks unliking (since INTERESTED is removed)
     active_rsvp = db.query(models.RSVP).filter(
         and_(
             models.RSVP.user_id == current_user.id,
             models.RSVP.event_id == id,
-            models.RSVP.status.in_(['INTERESTED', 'GOING'])  # Only active RSVPs block unliking
+            models.RSVP.status == 'GOING'  # Only GOING blocks unliking now
         )
     ).first()
     
@@ -691,9 +692,7 @@ def unlike_event(
     like_query.delete(synchronize_session=False)
     db.commit()
     
-    # NEW: Clean up any matches when user unlikes an event
-    # Import the service at the top of the file if not already imported
-    # from ..services.match_service import MatchService
+    # Clean up any matches when user unlikes an event
     from ..services.match_service import MatchService
     
     # Delete matches for this event/user combination
@@ -709,7 +708,7 @@ def rsvp_to_event(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    """RSVP to an event (INTERESTED, GOING, or CANCELLED)"""
+    """RSVP to an event (GOING or CANCELLED only)"""
     
     # Check if event exists
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
@@ -717,6 +716,20 @@ def rsvp_to_event(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Event with id {event_id} not found"
+        )
+    
+    # UPDATED: Validate that user has liked the event first
+    user_like = db.query(models.EventLike).filter(
+        and_(
+            models.EventLike.user_id == current_user.id,
+            models.EventLike.event_id == event_id
+        )
+    ).first()
+    
+    if not user_like:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must like an event before you can RSVP to it"
         )
     
     # Check if user already has an RSVP for this event

@@ -1,3 +1,5 @@
+// Update in react-client/src/pages/MatchedEvents.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -14,9 +16,9 @@ interface MatchedEvent extends Event {
   liked_by_friends?: User[];
   liked_by_current_user?: boolean;
   going_users?: User[];
-  interested_users?: User[];
   current_user_rsvp?: {
-    status: 'INTERESTED' | 'GOING' | 'CANCELLED';
+    status: 'GOING' | 'CANCELLED';
+    responded_at: string;
   };
 }
 
@@ -44,20 +46,17 @@ const MatchedEvents: React.FC = () => {
           try {
             const rsvps = await getEventRSVPs(event.id);
             const going_users = rsvps.filter(rsvp => rsvp.rsvp_status === 'GOING');
-            const interested_users = rsvps.filter(rsvp => rsvp.rsvp_status === 'INTERESTED');
             
             return {
               ...event,
-              going_users,
-              interested_users
+              going_users
               // current_user_rsvp is now included directly from the backend API
             };
           } catch (error) {
             console.error(`Error fetching RSVPs for event ${event.id}:`, error);
             return {
               ...event,
-              going_users: [],
-              interested_users: []
+              going_users: []
             };
           }
         })
@@ -104,8 +103,8 @@ const MatchedEvents: React.FC = () => {
     setShowLikersModal(null);
   };
   
-  // Handle RSVP (Interested or Going)
-  const handleRSVP = async (eventId: number, status: 'INTERESTED' | 'GOING', event: React.MouseEvent) => {
+  // Handle RSVP (Going only, since Interested is removed)
+  const handleRSVP = async (eventId: number, status: 'GOING', event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
     
@@ -121,7 +120,7 @@ const MatchedEvents: React.FC = () => {
     }
   };
   
-  // Handle Cancel RSVP
+  // Handle Cancel RSVP (goes back to LIKED state)
   const handleCancelRSVP = async (eventId: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
@@ -138,7 +137,7 @@ const MatchedEvents: React.FC = () => {
     }
   };
   
-  // Handle Unlike Event
+  // Handle Unlike Event (removes from matches completely)
   const handleUnlike = async (eventId: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
@@ -156,12 +155,12 @@ const MatchedEvents: React.FC = () => {
     }
   };
   
-  // Get the current status circle for an event
-  const getEventStatus = (event: MatchedEvent) => {
-    if (event.current_user_rsvp) {
-      return event.current_user_rsvp.status;
+  // Get the current status for an event
+  const getEventStatus = (event: MatchedEvent): 'LIKED' | 'GOING' => {
+    if (event.current_user_rsvp && event.current_user_rsvp.status === 'GOING') {
+      return 'GOING';
     }
-    return event.liked_by_current_user ? 'LIKED' : 'NONE';
+    return 'LIKED';  // Default to LIKED (since they matched, they must have liked it)
   };
   
   // Render action buttons based on current status
@@ -184,12 +183,6 @@ const MatchedEvents: React.FC = () => {
         return (
           <div className="flex space-x-2">
             <button
-              onClick={(e) => handleRSVP(event.id, 'INTERESTED', e)}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Interested
-            </button>
-            <button
               onClick={(e) => handleRSVP(event.id, 'GOING', e)}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
             >
@@ -204,33 +197,9 @@ const MatchedEvents: React.FC = () => {
           </div>
         );
         
-      case 'INTERESTED':
-        return (
-          <div className="flex space-x-2">
-            <button
-              onClick={(e) => handleRSVP(event.id, 'GOING', e)}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
-              Going 🎉
-            </button>
-            <button
-              onClick={(e) => handleCancelRSVP(event.id, e)}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Cancel RSVP
-            </button>
-          </div>
-        );
-        
       case 'GOING':
         return (
           <div className="flex space-x-2">
-            <button
-              onClick={(e) => handleRSVP(event.id, 'INTERESTED', e)}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Change to Interested
-            </button>
             <button
               onClick={(e) => handleCancelRSVP(event.id, e)}
               className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
@@ -252,8 +221,6 @@ const MatchedEvents: React.FC = () => {
     switch (status) {
       case 'LIKED':
         return <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Liked</span>;
-      case 'INTERESTED':
-        return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Interested</span>;
       case 'GOING':
         return <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Going</span>;
       default:
@@ -370,25 +337,13 @@ const MatchedEvents: React.FC = () => {
                 {/* Expanded Content */}
                 {isExpanded && (
                   <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    {/* Event Details */}
                     <div className="mb-4">
-                      <h4 className="font-bold mb-3">Event Details</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm"><strong>Description:</strong> {event.description}</p>
-                        <p className="text-sm"><strong>When:</strong> {formatDateTime(event.start_date, event.start_time)}</p>
-                        {event.end_date && event.end_time && (
-                          <p className="text-sm"><strong>Until:</strong> {formatDateTime(event.end_date, event.end_time)}</p>
-                        )}
-                        <p className="text-sm"><strong>Where:</strong> {event.location}</p>
-                        {event.guest_limit && (
-                          <p className="text-sm"><strong>Guest Limit:</strong> {event.guest_limit}</p>
-                        )}
-                        <p className="text-sm"><strong>Going:</strong> {event.going_count} | <strong>Interested:</strong> {event.interested_count}</p>
-                      </div>
+                      <h4 className="font-semibold mb-2">Description</h4>
+                      <p className="text-sm text-gray-700">{event.description}</p>
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="text-center">
+                    <div className="mb-4">
                       {renderActionButtons(event)}
                     </div>
                   </div>
@@ -399,83 +354,49 @@ const MatchedEvents: React.FC = () => {
         </div>
       )}
       
-      {/* Likers Modal */}
+                  {/* Likers Modal */}
       {showLikersModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Event Interest</h3>
+              <h3 className="text-lg font-semibold">People who liked this event</h3>
               <button
                 onClick={closeLikersModal}
-                className="text-gray-500 hover:text-gray-700 text-xl"
+                className="text-gray-500 hover:text-gray-700"
               >
-                ×
+                ✕
               </button>
             </div>
             
-            {(() => {
-              const currentEvent = events.find(e => e.id === showLikersModal)!;
-              const peopleLiked = getPeopleLiked(currentEvent);
-              const peopleGoing = getPeopleGoing(currentEvent);
-              
-              return (
-                <div className="space-y-4">
-                  {/* People who liked */}
-                  {peopleLiked.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Liked this event:</h4>
-                      <div className="space-y-2">
-                        {peopleLiked.map(person => (
-                          <div key={person.id} className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs">
-                              {person.profile_picture ? (
-                                <img 
-                                  src={person.profile_picture} 
-                                  alt={person.username}
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                person.username.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <span className="text-sm">{person.username}</span>
-                          </div>
-                        ))}
+            <div className="space-y-2">
+              {(() => {
+                const event = events.find(e => e.id === showLikersModal);
+                const peopleLiked = event ? getPeopleLiked(event) : [];
+                
+                return peopleLiked.length > 0 ? (
+                  peopleLiked.map((person) => (
+                    <div key={person.id} className="flex items-center space-x-3 p-2 rounded hover:bg-gray-100">
+                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        {person.profile_picture ? (
+                          <img 
+                            src={person.profile_picture} 
+                            alt={person.username}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">
+                            {person.username.charAt(0).toUpperCase()}
+                          </span>
+                        )}
                       </div>
+                      <span className="text-sm">{person.username}</span>
                     </div>
-                  )}
-                  
-                  {/* People who are going */}
-                  {peopleGoing.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Going to this event:</h4>
-                      <div className="space-y-2">
-                        {peopleGoing.map(person => (
-                          <div key={person.id} className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs">
-                              {person.profile_picture ? (
-                                <img 
-                                  src={person.profile_picture} 
-                                  alt={person.username}
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                person.username.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <span className="text-sm">{person.username}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {peopleLiked.length === 0 && peopleGoing.length === 0 && (
-                    <p className="text-sm text-gray-500">No one has shown interest yet.</p>
-                  )}
-                </div>
-              );
-            })()}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No one has liked this event yet.</p>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
