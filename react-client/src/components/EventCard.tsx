@@ -56,14 +56,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
           />
           
           {/* FRIENDS AVATARS OVERLAY - Using the new component */}
-          {event.liked_by_friends && event.liked_by_friends.length > 0 && (
+          {/* {event.liked_by_friends && event.liked_by_friends.length > 0 && (
             <div className="absolute top-4 left-4">
               <FriendsLikedButton
                 friends={event.liked_by_friends}
                 onUserClick={handleUserClick}
               />
             </div>
-          )}
+          )} */}
           
           {/* DATE/TIME OVERLAY */}
           <div className="absolute top-4 right-4 text-right">
