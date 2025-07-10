@@ -276,6 +276,9 @@ def get_events(
 
 # Replace the existing /matches endpoint in FASTAPI/app/routers/event.py
 
+# Fix for FASTAPI/app/routers/event.py - get_user_matches function
+# Replace the existing get_user_matches function with this fixed version
+
 @router.get("/matches")
 def get_user_matches(
     db: Session = Depends(get_db),
@@ -309,14 +312,14 @@ def get_user_matches(
             models.Event.start_date.asc()  # Sort by event date ascending
         ).offset(skip).limit(limit).all()
         
-        # Step 3: Get current user's friends (FIXED: using addressee_id instead of receiver_id)
+        # Step 3: Get current user's friends
         accepted_friendships = db.query(models.Friendship).filter(
             and_(
                 or_(
                     models.Friendship.requester_id == current_user.id,
                     models.Friendship.addressee_id == current_user.id
                 ),
-                models.Friendship.status == 'accepted'  # Changed from 'ACCEPTED' to 'accepted'
+                models.Friendship.status == 'accepted'
             )
         ).all()
         
@@ -331,8 +334,10 @@ def get_user_matches(
         result = []
         for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
             
-            # Get friends who liked this event
-            friends_who_liked = []
+            # Get ALL users who liked this event (friends + current user)
+            all_liked_users = []
+            
+            # First, get friends who liked this event
             if friend_ids:
                 liked_friends = db.query(models.User).join(
                     models.EventLike,
@@ -344,7 +349,7 @@ def get_user_matches(
                     )
                 ).all()
                 
-                friends_who_liked = [
+                all_liked_users.extend([
                     {
                         "id": friend.id,
                         "username": friend.username,
@@ -352,15 +357,27 @@ def get_user_matches(
                         "profile_picture": friend.profile_picture
                     }
                     for friend in liked_friends
-                ]
+                ])
             
-            # Check if current user liked this event
+            # Check if current user liked this event (they should have, since it's a match)
             user_liked = db.query(models.EventLike).filter(
                 and_(
                     models.EventLike.user_id == current_user.id,
                     models.EventLike.event_id == event.id
                 )
             ).first() is not None
+            
+            # FIXED: Add current user to the liked list if they liked it
+            if user_liked:
+                # Check if current user is not already in the list (in case they're somehow in friend_ids)
+                current_user_in_list = any(user["id"] == current_user.id for user in all_liked_users)
+                if not current_user_in_list:
+                    all_liked_users.append({
+                        "id": current_user.id,
+                        "username": current_user.username,
+                        "email": current_user.email,
+                        "profile_picture": current_user.profile_picture
+                    })
             
             # Get current user's RSVP status for this event
             current_user_rsvp = db.query(models.RSVP).filter(
@@ -408,7 +425,7 @@ def get_user_matches(
                 "last_edited_at": event.last_edited_at.isoformat() if event.last_edited_at else None,
                 "creator_id": event.creator_id,
                 "liked_by_current_user": user_liked,
-                "liked_by_friends": friends_who_liked,
+                "liked_by_friends": all_liked_users,  # FIXED: Now includes current user
                 "creator": creator_info,
                 "current_user_rsvp": current_rsvp_data
             }
