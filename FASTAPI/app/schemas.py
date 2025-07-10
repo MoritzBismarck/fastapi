@@ -295,3 +295,23 @@ class UserWithRSVP(UserOut):
     
     class Config:
         from_attributes = True
+
+class ChatMessageCreate(BaseModel):
+    content: str
+    
+    class Config:
+        str_strip_whitespace = True
+
+class ChatMessageSender(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+
+class ChatMessage(BaseModel):
+    id: int
+    content: str
+    sent_at: datetime
+    sender: ChatMessageSender
+    
+    class Config:
+        from_attributes = True

@@ -18,6 +18,7 @@ import DesignTest from './pages/DesignTest';
 import InvitationManager from './pages/InvitationManager';
 import Signup from './pages/Signup';
 import MatchedEvents from './pages/MatchedEvents';
+import EventChat from './pages/EventChat';
 
 const App: React.FC = () => {
   return (
@@ -114,6 +115,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/events/:eventId/chat" element={<EventChat />} />
               <Route path="/chat" element={<ChatRoom />} />
             </Routes>
           </div>

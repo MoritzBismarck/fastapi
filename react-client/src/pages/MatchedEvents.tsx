@@ -141,7 +141,11 @@ const MatchedEvents: React.FC = () => {
     }
   };
   
-  // Handle Unlike Event (removes from matches completely)
+  // Handle opening chat for an event
+  const handleOpenChat = (eventId: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    navigate(`/events/${eventId}/chat`);
+  };
   const handleUnlike = async (eventId: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
@@ -425,8 +429,17 @@ const MatchedEvents: React.FC = () => {
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="mb-4">
+                    <div className="mb-4 space-y-2">
                       {renderActionButtons(event)}
+                      
+                      {/* Chat Button */}
+                      <button
+                        onClick={(e) => handleOpenChat(event.id, e)}
+                        className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center justify-center space-x-2"
+                      >
+                        <span>💬</span>
+                        <span>Chat with Event Group</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -462,7 +475,7 @@ const MatchedEvents: React.FC = () => {
                     {peopleGoing.length > 0 && (
                       <div>
                         <h4 className="font-medium text-green-700 mb-2 flex items-center">
-                          <span className="text-green-600 mr-1">✅</span>
+                          <span className="text-green-600 mr-1">🎉</span>
                           Going ({peopleGoing.length})
                         </h4>
                         <div className="space-y-2 mb-4">
@@ -492,8 +505,8 @@ const MatchedEvents: React.FC = () => {
                     {peopleLiked.length > 0 && (
                       <div>
                         <h4 className="font-medium text-purple-700 mb-2 flex items-center">
-                          <span className="text-purple-600 mr-1">❤️</span>
-                          Interested ({peopleLiked.length})
+                          <span className="text-purple-600 mr-1">👍</span>
+                          Liked ({peopleLiked.length})
                         </h4>
                         <div className="space-y-2">
                           {peopleLiked
