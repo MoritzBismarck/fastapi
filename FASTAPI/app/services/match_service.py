@@ -95,10 +95,15 @@ class MatchService:
     
     @staticmethod
     def delete_matches_for_event_unlike(db: Session, user_id: int, event_id: int):
-        """Delete matches when a user unlikes an event"""
+        """
+        Smart match management when a user unlikes an event:
+        - Remove only the user who unliked from matches
+        - Keep matches alive if other participants remain
+        - Only delete match completely if it becomes empty or has only 1 person left
+        """
         
-        # Find matches for this event that include this user
-        matches_to_delete = db.query(models.Match).join(
+        # Find all matches for this event that include this user
+        matches_with_user = db.query(models.Match).join(
             models.MatchParticipant
         ).filter(
             and_(
@@ -107,19 +112,150 @@ class MatchService:
             )
         ).all()
         
-        for match in matches_to_delete:
-            # Check if this match only has 2 participants (the standard case)
-            participant_count = db.query(models.MatchParticipant).filter(
+        matches_deleted = []
+        participants_removed = []
+        
+        for match in matches_with_user:
+            # Get current participant count
+            current_participants = db.query(models.MatchParticipant).filter(
                 models.MatchParticipant.match_id == match.id
-            ).count()
+            ).all()
+            
+            participant_count = len(current_participants)
             
             if participant_count <= 2:
-                # Delete the entire match since one user is unliking
+                # If 2 or fewer participants, delete the entire match
+                # (since a match needs at least 2 people to be meaningful)
+                
+                # Delete all participants first
                 db.query(models.MatchParticipant).filter(
                     models.MatchParticipant.match_id == match.id
                 ).delete()
+                
+                # Delete all chat messages for this match
+                db.query(models.ChatMessage).filter(
+                    models.ChatMessage.match_id == match.id
+                ).delete()
+                
+                # Delete the match itself
                 db.query(models.Match).filter(
                     models.Match.id == match.id
                 ).delete()
+                
+                matches_deleted.append(match.id)
+                
+            else:
+                # If more than 2 participants, remove only this user
+                # Keep the match alive for remaining participants
+                
+                db.query(models.MatchParticipant).filter(
+                    and_(
+                        models.MatchParticipant.match_id == match.id,
+                        models.MatchParticipant.user_id == user_id
+                    )
+                ).delete()
+                
+                participants_removed.append({
+                    'match_id': match.id,
+                    'user_id': user_id,
+                    'remaining_participants': participant_count - 1
+                })
+                
+                # Add a system message to the chat notifying that user left
+                # (Optional - for transparency)
+                user = db.query(models.User).filter(models.User.id == user_id).first()
+                if user:
+                    system_message = models.ChatMessage(
+                        match_id=match.id,
+                        sender_id=user_id,  # Or create a system user
+                        content=f"📢 {user.username} has left the event chat."
+                    )
+                    db.add(system_message)
         
         db.commit()
+        
+        # Return summary of what happened (useful for logging/debugging)
+        return {
+            'matches_deleted': matches_deleted,
+            'participants_removed': participants_removed
+        }
+    @staticmethod
+    def get_match_participants_count(db: Session, match_id: int) -> int:
+        """Get the number of participants in a match"""
+        return db.query(models.MatchParticipant).filter(
+            models.MatchParticipant.match_id == match_id
+        ).count()
+
+    @staticmethod
+    def add_user_to_existing_matches(db: Session, user_id: int, event_id: int):
+        """
+        When a user likes an event, add them to existing matches for that event
+        if they're friends with existing participants
+        """
+        
+        # Get user's friends
+        user_friend_ids = set()
+        
+        # Get friendships where user is requester
+        requester_friendships = db.query(models.Friendship).filter(
+            and_(
+                models.Friendship.requester_id == user_id,
+                models.Friendship.status == "accepted"
+            )
+        ).all()
+        user_friend_ids.update([f.addressee_id for f in requester_friendships])
+        
+        # Get friendships where user is addressee
+        addressee_friendships = db.query(models.Friendship).filter(
+            and_(
+                models.Friendship.addressee_id == user_id,
+                models.Friendship.status == "accepted"
+            )
+        ).all()
+        user_friend_ids.update([f.requester_id for f in addressee_friendships])
+        
+        if not user_friend_ids:
+            return []  # No friends, no matches to join
+        
+        # Find existing matches for this event that contain friends
+        existing_matches = db.query(models.Match).join(
+            models.MatchParticipant
+        ).filter(
+            and_(
+                models.Match.event_id == event_id,
+                models.MatchParticipant.user_id.in_(user_friend_ids)
+            )
+        ).distinct().all()
+        
+        matches_joined = []
+        
+        for match in existing_matches:
+            # Check if user is already in this match
+            user_already_in_match = db.query(models.MatchParticipant).filter(
+                and_(
+                    models.MatchParticipant.match_id == match.id,
+                    models.MatchParticipant.user_id == user_id
+                )
+            ).first()
+            
+            if not user_already_in_match:
+                # Add user to this existing match
+                new_participant = models.MatchParticipant(
+                    match_id=match.id,
+                    user_id=user_id
+                )
+                db.add(new_participant)
+                matches_joined.append(match.id)
+                
+                # Add a system message to notify other participants
+                user = db.query(models.User).filter(models.User.id == user_id).first()
+                if user:
+                    system_message = models.ChatMessage(
+                        match_id=match.id,
+                        sender_id=user_id,  # Or create a system user
+                        content=f"🎉 {user.username} has joined the event chat!"
+                    )
+                    db.add(system_message)
+        
+        db.commit()
+        return matches_joined
