@@ -475,7 +475,7 @@ const MatchedEvents: React.FC = () => {
                     {peopleGoing.length > 0 && (
                       <div>
                         <h4 className="font-medium text-green-700 mb-2 flex items-center">
-                          <span className="text-green-600 mr-1">🎉</span>
+                          <span className="text-green-600 mr-1">✅</span>
                           Going ({peopleGoing.length})
                         </h4>
                         <div className="space-y-2 mb-4">
@@ -505,8 +505,8 @@ const MatchedEvents: React.FC = () => {
                     {peopleLiked.length > 0 && (
                       <div>
                         <h4 className="font-medium text-purple-700 mb-2 flex items-center">
-                          <span className="text-purple-600 mr-1">👍</span>
-                          Liked ({peopleLiked.length})
+                          <span className="text-purple-600 mr-1">❤️</span>
+                          Interested ({peopleLiked.length})
                         </h4>
                         <div className="space-y-2">
                           {peopleLiked

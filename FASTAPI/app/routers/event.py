@@ -279,6 +279,9 @@ def get_events(
 # Fix for FASTAPI/app/routers/event.py - get_user_matches function
 # Replace the existing get_user_matches function with this fixed version
 
+# Fix for FASTAPI/app/routers/event.py - get_user_matches function
+# Replace the existing get_user_matches function with this fixed version
+
 @router.get("/matches")
 def get_user_matches(
     db: Session = Depends(get_db),
@@ -334,10 +337,24 @@ def get_user_matches(
         result = []
         for event, creator_id, creator_username, creator_profile_picture in events_with_creators:
             
-            # Get ALL users who liked this event (friends + current user)
+            # Get ALL users who RSVP'd as "GOING" to this event (to exclude from liked list)
+            users_going = db.query(models.User.id).join(
+                models.RSVP,
+                models.RSVP.user_id == models.User.id
+            ).filter(
+                and_(
+                    models.RSVP.event_id == event.id,
+                    models.RSVP.status == 'GOING'
+                )
+            ).subquery()
+            
+            # Get user IDs who are going (for exclusion from liked list)
+            going_user_ids = {row[0] for row in db.query(users_going.c.id).all()}
+            
+            # Get users who liked this event (friends + current user) BUT exclude those who RSVP'd as GOING
             all_liked_users = []
             
-            # First, get friends who liked this event
+            # First, get friends who liked this event but haven't RSVP'd as going
             if friend_ids:
                 liked_friends = db.query(models.User).join(
                     models.EventLike,
@@ -345,7 +362,8 @@ def get_user_matches(
                 ).filter(
                     and_(
                         models.EventLike.event_id == event.id,
-                        models.User.id.in_(friend_ids)
+                        models.User.id.in_(friend_ids),
+                        ~models.User.id.in_(going_user_ids)  # EXCLUDE users who RSVP'd as going
                     )
                 ).all()
                 
@@ -367,8 +385,8 @@ def get_user_matches(
                 )
             ).first() is not None
             
-            # FIXED: Add current user to the liked list if they liked it
-            if user_liked:
+            # FIXED: Add current user to the liked list ONLY if they liked it AND haven't RSVP'd as going
+            if user_liked and current_user.id not in going_user_ids:
                 # Check if current user is not already in the list (in case they're somehow in friend_ids)
                 current_user_in_list = any(user["id"] == current_user.id for user in all_liked_users)
                 if not current_user_in_list:
