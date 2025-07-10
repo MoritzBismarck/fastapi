@@ -1,10 +1,24 @@
-FROM python:3.12.9-bookworm
+FROM python:3.11-slim
 
-WORKDIR /usr/src/app
+WORKDIR /app/
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Poetry
+ENV UV_SYSTEM_PYTHON=1
 
-COPY . .
+# Allow installing dev dependencies to run tests
+RUN pip install uv
 
-CMD [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+
+COPY requirements.txt /app/
+
+COPY ./app /app/app
+
+RUN uv pip install --no-cache-dir -r requirements.txt
+
+ENV PYTHONPATH=/app
+
+COPY ./alembic.ini /app/
+
+COPY ./alembic /app/
+
+COPY ./prestart.sh /app/
