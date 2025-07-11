@@ -430,16 +430,18 @@ const MatchedEvents: React.FC = () => {
                     
                     {/* Action Buttons */}
                     <div className="mb-4 space-y-2">
-                      {renderActionButtons(event)}
-                      
-                      {/* Chat Button */}
-                      <button
+                    {renderActionButtons(event)}
+                    
+                    {/* TEMPORARILY DISABLED - Chat Button */}
+                    {/* 
+                    <button
                         onClick={(e) => handleOpenChat(event.id, e)}
                         className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center justify-center space-x-2"
-                      >
+                    >
                         <span>💬</span>
                         <span>Chat with Event Group</span>
-                      </button>
+                    </button>
+                    */}
                     </div>
                   </div>
                 )}
