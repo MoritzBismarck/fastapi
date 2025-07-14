@@ -1,0 +1,4 @@
+{$CADDY_DOMAIN} {
+    header Strict-Transport-Security max-age=31536000;
+    reverse_proxy {$FRONTEND_TARGET}
+}
