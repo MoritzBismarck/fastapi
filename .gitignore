@@ -20,4 +20,3 @@ FASTAPI/.env
 react-client/.env
 
 compose.yml
-Dockerfile
