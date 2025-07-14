@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./FASTAPI
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      # <port on local machine>:<port in container>
+    env_file:
+      - ./FASTAPI/.env
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+  frontend:
+    build:
+      context: ./react-client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      # <port on local machine>:<port in container>
+    env_file:
+      - ./react-client/.process.env
+    command: ["bun", "run", "start"]
+    depends_on:
+      - backend

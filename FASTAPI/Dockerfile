@@ -8,12 +8,11 @@ ENV UV_SYSTEM_PYTHON=1
 # Allow installing dev dependencies to run tests
 RUN pip install uv
 
-
 COPY requirements.txt /app/
 
-COPY ./app /app/app
-
 RUN uv pip install --no-cache-dir -r requirements.txt
+
+COPY ./app /app/app
 
 ENV PYTHONPATH=/app
 
