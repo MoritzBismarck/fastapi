@@ -1,23 +1,66 @@
+# version: '3.9'
+
 services:
   backend:
     build:
       context: ./FASTAPI
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    restart: unless-stopped
     ports:
       - "8000:8000"
       # <port on local machine>:<port in container>
     env_file:
-      - ./FASTAPI/.env
+      - .env
+    volumes:
+      - ./FASTAPI:/app:ro
+      - ./FASTAPI/alembic:/app/alembic:ro
+    networks:
+      - app-network
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
   frontend:
     build:
       context: ./react-client
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    restart: unless-stopped
     ports:
       - "3000:3000"
       # <port on local machine>:<port in container>
     env_file:
-      - ./react-client/.process.env
-    command: ["bun", "run", "start"]
+      - ./react-client/.env.react.production
     depends_on:
       - backend
+    networks:
+      - app-network
+    command: ["bun", "run", "start"]
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CADDY_DOMAIN=localhost
+      - FRONTEND_TARGET=frontend:3000
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
+
+networks:
+  app-network:
+    driver: bridge

@@ -315,3 +315,29 @@ class ChatMessage(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class MutualFriend(BaseModel):
+    id: int
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class UserProfile(BaseModel):
+    id: int
+    username: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    created_at: str
+    mutual_friends: Optional[List[MutualFriend]] = None
+    relationship: Optional[str] = None
+    friendshipId: Optional[int] = None
+    
+    class Config:
+        from_attributes = True

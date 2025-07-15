@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   variant = 'default',
-  title = 'THE BONE - beta',
+  title = 'BONE - Closed Beta',
 }) => {
   const { username } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,19 +18,27 @@ const Header: React.FC<HeaderProps> = ({
   const navigate = useNavigate();
 
   const wrapperClass = variant === 'login' ? 'mb-6' : 'mb-8';
-  const h1Class = variant === 'login'
-    ? 'text-3xl font-bold text-center mb-2'
-    : 'text-2xl font-bold';
   const hrClass = variant === 'login'
     ? 'border-0 border-t-4 border-black mb-6'
     : 'border-0 border-t-4 border-black mb-6';
 
   return (
     <header className={wrapperClass}>
-      <div className="relative flex items-center justify-center mb-2 min-h-[2.5rem]">
-        {/* Profile button on the right */}
+      <div className="relative flex items-center justify-between mb-2 min-h-[4rem]">
+        {/* Left: Brand and Beta label as plain text */}
+        <div className="flex items-center font-mono">
+          <Link
+            to={variant === 'login' ? '/' : '/dashboard'}
+            className="text-black hover:text-black visited:text-black focus:text-black active:text-black"
+          >
+            <span className="text-3xl font-bold leading-tight mr-2">BONE</span>
+            <span className="text-base ml-2">Closed Beta</span>
+          </Link>
+        </div>
+
+        {/* Profile button on the right, vertically centered */}
         {username && (
-          <div className="absolute right-0 text-lg">
+          <div className="text-lg flex items-center">
             <span
               onClick={() => navigate('/profile')}
               className="cursor-pointer flex items-center"
@@ -44,19 +52,10 @@ const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
         )}
-
-        {/* Centered title */}
-        <h1 className={h1Class + " w-full text-center font-mono text-3xl"}>
-          <Link
-            to={variant === 'login' ? '/' : '/dashboard'}
-            className="text-black hover:text-black visited:text-black focus:text-black active:text-black "
-          >
-            {title}
-          </Link>
-        </h1>
       </div>
       <hr className={hrClass} />
     </header>
   );
 };
+
 export default Header;

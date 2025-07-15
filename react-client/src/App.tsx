@@ -19,6 +19,7 @@ import InvitationManager from './pages/InvitationManager';
 import Signup from './pages/Signup';
 import MatchedEvents from './pages/MatchedEvents';
 import EventChat from './pages/EventChat';
+import UserProfilePage from './pages/UserProfile';
 
 const App: React.FC = () => {
   return (
@@ -117,6 +118,7 @@ const App: React.FC = () => {
               />
               <Route path="/events/:eventId/chat" element={<EventChat />} />
               <Route path="/chat" element={<ChatRoom />} />
+              <Route path="/profile/:userId" element={<UserProfilePage />} />
             </Routes>
           </div>
         </BrowserRouter>

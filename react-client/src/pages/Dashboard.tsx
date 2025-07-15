@@ -18,20 +18,20 @@ const Dashboard: React.FC = () => {
       </div>
       
       <div className="mb-12">
-        <Link to="/events" className="text-xl text-blue-700 underline font-bold">
-          Events
+        <Link to="/friends" className="text-xl text-black underline font-bold">
+          1. Friends
         </Link>
-        <p className="ml-8 mt-2">Find and join events with your friends</p>
-      </div>
-      
-      <div className="mb-12">
-        <Link to="/friends" className="text-xl text-blue-700 underline font-bold">
-          Friends
-        </Link>
-        <p className="ml-8 mt-2">Find and connect with friends</p>
+        <p className="font-bold ml-8 mt-2">Find your friends</p>
       </div>
 
       <div className="mb-12">
+        <Link to="/events" className="text-xl text-black underline font-bold">
+          2. Events
+        </Link>
+        <p className="font-bold ml-8 mt-2">Match with events</p>
+      </div>
+
+      {/* <div className="mb-12">
         <a 
           href="/chat" 
           target="_blank" 
@@ -41,13 +41,13 @@ const Dashboard: React.FC = () => {
           Support Chat
         </a>
         <p className="ml-8 mt-2">Anonymous 5-minute support sessions (Beta)</p>
-      </div>
+      </div> */}
       
       <hr className="border-gray-400 my-8" />
       
       <footer className="text-gray-600 text-sm">
-        <p>© 2025 Bone Social Web Project</p>
-        <p>CONNECTION: fickdoomscrolling.com</p>
+        <p>© 2025 Lalela Arts & Comms UG</p>
+        <p>CONNECTION: bone-social.com</p>
       </footer>
     </div>
   );

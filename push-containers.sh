@@ -1,5 +1,13 @@
-docker buildx build -t mobism/backend:latest1 -f ./FASTAPI/Dockerfile ./FASTAPI
-docker push mobism/backend:latest1
+docker buildx build \
+  --platform linux/amd64 \
+  --push \
+  -t mobism/backend:latest2 \
+  -f ./FASTAPI/Dockerfile \
+  ./FASTAPI
 
-docker buildx build -t mobism/frontend:latest1 -f ./react-client/Dockerfile ./react-client
-docker push mobism/frontend:latest1
+docker buildx build \
+  --platform linux/amd64 \
+  --push \
+  -t mobism/frontend:latest2 \
+  -f ./react-client/Dockerfile \
+  ./react-client

@@ -1,12 +1,15 @@
-// src/pages/Friends.tsx
+// Update react-client/src/pages/Friends.tsx
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
-import Button from '../components/Button'; // Import our new Button component
-import { User, Friendship } from '../types';
+import Button from '../components/Button';
+import { User, Friendship, MutualFriend } from '../types';
 import { del, get, post, put } from '../api/client';
 
 const Friends: React.FC = () => {
+  const navigate = useNavigate();
   // State for users and friends
   const [users, setUsers] = useState<User[]>([]);
   const [friends, setFriends] = useState<Friendship[]>([]);
@@ -22,7 +25,6 @@ const Friends: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      // Use the client directly since we haven't created the friendsApi yet
       const response = await get<{users: User[], friends: Friendship[]}>('/users/overview');
       setUsers(response.users);
       setFriends(response.friends);
@@ -133,11 +135,47 @@ const Friends: React.FC = () => {
     }
   };
 
+  // Helper function to get full name
+  const getFullName = (user: User) => {
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    } else if (user.first_name) {
+      return user.first_name;
+    } else if (user.last_name) {
+      return user.last_name;
+    }
+    return '';
+  };
+
+  // Helper function to get mutual friends text
+  const getMutualFriendsText = (mutualFriends?: MutualFriend[]) => {
+    if (!mutualFriends || mutualFriends.length === 0) return '';
+    
+    if (mutualFriends.length === 1) {
+      return mutualFriends[0].username;
+    } else {
+      return `${mutualFriends[0].username} + ${mutualFriends.length - 1} more`;
+    }
+  };
+
+  // Helper function to handle profile click
+  const handleProfileClick = (user: User) => {
+    navigate(`/profile/${user.id}`);
+  };
+
+  // Helper function to handle profile click with event checking
+  const handleProfileClickWithCheck = (user: User, event: React.MouseEvent) => {
+    // Don't navigate if clicking on a button or its children
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    handleProfileClick(user);
+  };
+
   return (
     <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
-      
-      <h1 className="text-2xl font-bold mb-6">Friend Finder</h1>
       
       {error && (
         <div className="border border-red-500 p-2 mb-4 text-red-700 bg-red-100">
@@ -152,44 +190,63 @@ const Friends: React.FC = () => {
           {/* People to Friend Section */}
           <section className="mb-8">
             <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
-              People{' '}
-              <span className="text-base font-medium text-gray-600">
-                (To discover)
-              </span>
+              Suggested Friends
             </h2>
             
             {users.length > 0 ? (
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {users.map(user => (
-                  <li key={user.id} className="border border-gray-300 p-4 flex justify-between items-center">
-                    <div className="flex items-center">
+                  <li key={user.id} className="flex items-center justify-between py-2 hover:bg-gray-50">
+                    <div 
+                      className="flex items-center flex-1 cursor-pointer pr-4"
+                      onClick={(event) => handleProfileClickWithCheck(user, event)}
+                    >
                       {/* Profile Picture */}
-                      <div className="mr-3 w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      <div className="mr-3 w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                         {user.profile_picture ? (
                           <img 
                             src={user.profile_picture} 
                             alt={user.username}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.onerror = null; // Prevent infinite loop
-                              e.currentTarget.src = ''; // Fallback to empty string
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '';
                             }}
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold text-lg">
                             {user.username.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       
-                      <div>
-                        <p className="font-bold">{user.username}</p>
+                      <div className="flex-1 min-w-0">
+                        {/* Username */}
+                        <p className="font-semibold text-base truncate">{user.username}</p>
+                        
+                        {/* Real Name */}
+                        {getFullName(user) && (
+                          <p className="text-gray-600 text-sm truncate">{getFullName(user)}</p>
+                        )}
+                        
+                        {/* Mutual Friends */}
+                        {getMutualFriendsText(user.mutual_friends) && (
+                          <p className="text-gray-500 text-sm truncate">
+                            Mutual: {getMutualFriendsText(user.mutual_friends)}
+                          </p>
+                        )}
+                        
+                        {/* Same Time Join Indicator */}
+                        {user.same_time_join && (
+                          <p className="text-blue-600 text-xs">Joined around the same time</p>
+                        )}
                       </div>
                     </div>
                     
                     <Button 
                       size="sm"
                       onClick={() => handleFriendAction(user, getAction(user))}
+                      className="flex-shrink-0"
                     >
                       {getButtonText(user)}
                     </Button>
@@ -203,20 +260,23 @@ const Friends: React.FC = () => {
           
           {/* My Friends Section */}
           <section>
-          <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
-            Friends{' '}
-            <span className="text-base font-medium text-gray-600">
-              (You like each other)
-            </span>
-          </h2>
+            <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
+              Friends{' '}
+              <span className="text-base font-medium text-gray-600">
+                (You like each other)
+              </span>
+            </h2>
             
             {friends.length > 0 ? (
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {friends.map(friendship => (
-                  <li key={friendship.id} className="border border-gray-300 p-4 flex justify-between items-center">
-                    <div className="flex items-center">
+                  <li key={friendship.id} className="flex items-center justify-between py-2 hover:bg-gray-50">
+                    <div 
+                      className="flex items-center flex-1 cursor-pointer pr-4"
+                      onClick={(event) => handleProfileClickWithCheck(friendship.friend, event)}
+                    >
                       {/* Profile Picture */}
-                      <div className="mr-3 w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      <div className="mr-3 w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                         {friendship.friend.profile_picture ? (
                           <img 
                             src={friendship.friend.profile_picture} 
@@ -224,14 +284,30 @@ const Friends: React.FC = () => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold text-lg">
                             {friendship.friend.username.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       
-                      <p className="font-bold">{friendship.friend.username}</p>
+                      <div className="flex-1 min-w-0">
+                        {/* Username */}
+                        <p className="font-semibold text-base truncate">{friendship.friend.username}</p>
+                        
+                        {/* Real Name */}
+                        {getFullName(friendship.friend) && (
+                          <p className="text-gray-600 text-sm truncate">{getFullName(friendship.friend)}</p>
+                        )}
+                        
+                        {/* Mutual Friends */}
+                        {getMutualFriendsText(friendship.friend.mutual_friends) && (
+                          <p className="text-gray-500 text-sm truncate">
+                            Mutual: {getMutualFriendsText(friendship.friend.mutual_friends)}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                    
                     <Button 
                       variant="danger"
                       size="sm"
@@ -243,6 +319,7 @@ const Friends: React.FC = () => {
                         },
                         'remove'
                       )}
+                      className="flex-shrink-0"
                     >
                       Remove
                     </Button>

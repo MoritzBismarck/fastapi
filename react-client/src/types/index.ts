@@ -10,6 +10,29 @@ export interface User {
   friendshipId?: number | null;
   liked?: boolean;
   hasLikedCurrentUser?: boolean;
+  mutual_friends?: MutualFriend[];
+  same_time_join?: boolean;
+}
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+  created_at: string;
+  mutual_friends?: MutualFriend[];
+  relationship?: 'none' | 'friends' | 'request_sent' | 'request_received';
+  friendshipId?: number | null;
+}
+
+export interface MutualFriend {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
 }
   
   export interface Friendship {
@@ -84,3 +107,4 @@ export interface RSVP {
   status: RSVPStatus;
   responded_at: string;
 }
+

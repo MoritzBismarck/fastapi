@@ -1,6 +1,6 @@
 // src/api/friendsApi.ts
 import { get, post, put, del } from './client';
-import { Friendship, User } from '../types';
+import { Friendship, User, UserProfile } from '../types';
 
 // Interface for the friends overview response
 interface FriendsOverview {
@@ -29,4 +29,8 @@ export const updateFriendshipStatus = async (
 // Remove a friendship
 export const removeFriendship = async (friendshipId: number): Promise<void> => {
   return del(`/friendships/${friendshipId}`);
+};
+
+export const getUserProfile = async (userId: number): Promise<UserProfile> => {
+  return get<UserProfile>(`/users/${userId}/profile`);
 };
