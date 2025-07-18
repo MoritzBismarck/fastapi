@@ -108,3 +108,54 @@ export interface RSVP {
   responded_at: string;
 }
 
+export interface ChatMessage {
+  id: number;
+  content: string;
+  sender: {
+    id: number;
+    username: string;
+    profile_picture?: string;
+  };
+  sent_at: string;
+}
+
+export interface EventChatInfo {
+  id: number;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location: string;
+  cover_photo_url?: string;
+  creator?: {
+    id: number;
+    username: string;
+    profile_picture?: string;
+  };
+  match_participants: Array<{
+    id: number;
+    username: string;
+    profile_picture?: string;
+    email: string;
+  }>;
+}
+
+// Response type for sending messages (what the backend returns)
+export interface SendMessageResponse {
+  id: number;
+  content: string;
+  sent_at: string;
+  sender: {
+    id: number;
+    username: string;
+    profile_picture?: string;
+  };
+  message: string;
+}
+
+// For creating messages (what we send to backend)
+export interface CreateMessageRequest {
+  content: string;
+}

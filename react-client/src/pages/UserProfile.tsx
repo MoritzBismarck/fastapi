@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import MutualFriendsModal from '../components/MutualFriendsModal';
 import { UserProfile, MutualFriend } from '../types';
 import { getUserProfile } from '../api/friendsApi';
-import { sendFriendRequest, updateFriendshipStatus, removeFriendship } from '../api/friendsApi';
+import { sendFriendRequest, removeFriendship } from '../api/friendsApi';
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -43,36 +43,34 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
-  const handleFriendAction = async (action: 'request' | 'accept' | 'remove') => {
+  const handleLikeAction = async () => {
     if (!user) return;
 
     try {
       setIsActionLoading(true);
       setError(null);
 
-      if (action === 'request') {
+      if (user.relationship === 'friends') {
+        // Remove friendship (unlike)
+        if (user.friendshipId) {
+          await removeFriendship(user.friendshipId);
+          setUser({
+            ...user,
+            relationship: 'none',
+            friendshipId: null
+          });
+        }
+      } else {
+        // Send like (friend request)
         const response = await sendFriendRequest(user.id);
         setUser({
           ...user,
           relationship: 'request_sent',
           friendshipId: response.id
         });
-      } else if (action === 'accept' && user.friendshipId) {
-        await updateFriendshipStatus(user.friendshipId, 'accepted');
-        setUser({
-          ...user,
-          relationship: 'friends'
-        });
-      } else if (action === 'remove' && user.friendshipId) {
-        await removeFriendship(user.friendshipId);
-        setUser({
-          ...user,
-          relationship: 'none',
-          friendshipId: null
-        });
       }
     } catch (error) {
-      console.error('Error handling friend action:', error);
+      console.error('Error handling like action:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setIsActionLoading(false);
@@ -84,32 +82,15 @@ const UserProfilePage: React.FC = () => {
     
     switch (user.relationship) {
       case 'none': 
-        return 'Send Friend Request';
+        return 'Like';
       case 'request_sent': 
-        return 'Cancel Request';
+        return 'Mog i ni mehr';
       case 'request_received': 
-        return 'Accept Request';
+        return 'Like';
       case 'friends': 
-        return 'Remove Friend';
+        return 'Remove';
       default: 
-        return 'Send Friend Request';
-    }
-  };
-
-  const getAction = (): 'request' | 'accept' | 'remove' => {
-    if (!user) return 'request';
-    
-    switch (user.relationship) {
-      case 'none': 
-        return 'request';
-      case 'request_sent': 
-        return 'remove';
-      case 'request_received': 
-        return 'accept';
-      case 'friends': 
-        return 'remove';
-      default: 
-        return 'request';
+        return 'Like';
     }
   };
 
@@ -154,7 +135,7 @@ const UserProfilePage: React.FC = () => {
         </div>
         <div className="text-center">
           <Button onClick={() => navigate('/friends')}>
-            Back
+            Back to Friends
           </Button>
         </div>
       </div>
@@ -171,13 +152,13 @@ const UserProfilePage: React.FC = () => {
           variant="secondary"
           size="sm"
         >
-          ← Back
+          ← Back to Friends
         </Button>
       </div>
 
       <div className="flex flex-col items-center text-center max-w-sm mx-auto">
         {/* Large Profile Picture */}
-        <div className="w-60 h-60 overflow-hidden bg-gray-200 mb-8">
+        <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-200 mb-6">
           {user.profile_picture ? (
             <img 
               src={user.profile_picture} 
@@ -211,7 +192,7 @@ const UserProfilePage: React.FC = () => {
               variant="secondary"
               className="w-full py-3 text-sm"
             >
-              Mutuals: {getMutualFriendsButtonText()}
+              Followed by {getMutualFriendsButtonText()}
             </Button>
           </div>
         )}
@@ -223,10 +204,10 @@ const UserProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Like/Remove Button */}
         <div className="w-full">
           <Button 
-            onClick={() => handleFriendAction(getAction())}
+            onClick={handleLikeAction}
             disabled={isActionLoading}
             variant={user.relationship === 'friends' ? 'danger' : 'primary'}
             className="w-full py-3 text-base font-semibold"

@@ -316,6 +316,22 @@ class ChatMessage(BaseModel):
     class Config:
         from_attributes = True
 
+class EventMessageCreate(BaseModel):
+    content: str
+
+class EventMessageSender(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+
+class EventMessage(BaseModel):
+    id: int
+    content: str
+    sent_at: datetime
+    sender: EventMessageSender
+
+    class Config:
+        from_attributes = True
 
 class MutualFriend(BaseModel):
     id: int

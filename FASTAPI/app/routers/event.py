@@ -1,6 +1,6 @@
 # Create a new file: FASTAPI/app/routers/event.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Response, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 from datetime import datetime
@@ -12,15 +12,12 @@ import uuid
 from ..services import storage_service
 import jwt
 from ..config import settings
-import asyncio
-import json
+
 
 router = APIRouter(
     prefix="/events",
     tags=["events"]
 )
-
-event_chat_connections: Dict[int, List[WebSocket]] = {}
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.EventResponse)
 def create_event(
@@ -987,16 +984,24 @@ def get_event_chat_info(
     
     return response
 
-@router.get("/{event_id}/messages", response_model=List[schemas.ChatMessage])
+@router.get("/{event_id}/messages", response_model=List[schemas.EventMessage])
 def get_event_messages(
     event_id: int,
     limit: int = Query(50, le=100),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    """Get chat messages for an event"""
+    """Get chat messages for an event - SIMPLIFIED VERSION"""
     
-    # Check if user has access to this event chat
+    # Check if event exists
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found"
+        )
+    
+    # Check if user has access (must have liked the event)
     user_like = db.query(models.EventLike).filter(
         and_(
             models.EventLike.user_id == current_user.id,
@@ -1010,27 +1015,14 @@ def get_event_messages(
             detail="You must like this event to access the chat"
         )
     
-    # Find or create match for this event
-    match = db.query(models.Match).filter(models.Match.event_id == event_id).first()
-    
-    if not match:
-        # Create match if it doesn't exist
-        match = models.Match(
-            event_id=event_id,
-            context='PUBLIC'
-        )
-        db.add(match)
-        db.commit()
-        db.refresh(match)
-    
-    # Get messages for this match
-    messages = db.query(models.ChatMessage).join(
+    # Get messages directly for this event - MUCH SIMPLER!
+    messages = db.query(models.EventMessage).join(
         models.User,
-        models.ChatMessage.sender_id == models.User.id
+        models.EventMessage.sender_id == models.User.id
     ).filter(
-        models.ChatMessage.match_id == match.id
+        models.EventMessage.event_id == event_id
     ).order_by(
-        models.ChatMessage.sent_at.desc()
+        models.EventMessage.sent_at.desc()
     ).limit(limit).all()
     
     # Reverse to get chronological order
@@ -1055,13 +1047,21 @@ def get_event_messages(
 @router.post("/{event_id}/messages", status_code=status.HTTP_201_CREATED)
 def send_event_message(
     event_id: int,
-    message_data: schemas.ChatMessageCreate,
+    message_data: schemas.EventMessageCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    """Send a message to event chat"""
+    """Send a message to event chat - SIMPLIFIED VERSION"""
     
-    # Check if user has access to this event chat
+    # Check if event exists
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found"
+        )
+    
+    # Check if user has access (must have liked the event)
     user_like = db.query(models.EventLike).filter(
         and_(
             models.EventLike.user_id == current_user.id,
@@ -1075,22 +1075,9 @@ def send_event_message(
             detail="You must like this event to send messages"
         )
     
-    # Find or create match for this event
-    match = db.query(models.Match).filter(models.Match.event_id == event_id).first()
-    
-    if not match:
-        # Create match if it doesn't exist
-        match = models.Match(
-            event_id=event_id,
-            context='PUBLIC'
-        )
-        db.add(match)
-        db.commit()
-        db.refresh(match)
-    
-    # Create the message
-    new_message = models.ChatMessage(
-        match_id=match.id,
+    # Create the message directly tied to event - NO MATCH COMPLEXITY!
+    new_message = models.EventMessage(
+        event_id=event_id,
         sender_id=current_user.id,
         content=message_data.content
     )
@@ -1099,136 +1086,15 @@ def send_event_message(
     db.commit()
     db.refresh(new_message)
     
-    # Update match last_message_at
-    match.last_message_at = new_message.sent_at
-    db.commit()
-    
-    # Broadcast message to WebSocket connections - FIXED SYNCHRONOUS VERSION
-    if event_id in event_chat_connections:
-        message_json = {
-            "id": new_message.id,
-            "content": new_message.content,
-            "sent_at": new_message.sent_at.isoformat(),
-            "sender": {
-                "id": current_user.id,
-                "username": current_user.username,
-                "profile_picture": current_user.profile_picture
-            }
-        }
-        
-        print(f"Broadcasting message to {len(event_chat_connections[event_id])} connections")
-        
-        # Synchronous broadcasting - iterate through connections and send
-        disconnected = []
-        for ws in event_chat_connections[event_id][:]:  # Create a copy to iterate safely
-            try:
-                # Use asyncio.run to handle the async send operation
-                import asyncio
-                import threading
-                
-                def send_message():
-                    try:
-                        # Create new event loop for this thread
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        loop.run_until_complete(ws.send_text(json.dumps(message_json)))
-                        loop.close()
-                        print(f"Message sent to WebSocket connection")
-                    except Exception as e:
-                        print(f"Failed to send message to WebSocket: {e}")
-                        disconnected.append(ws)
-                
-                # Run in separate thread to avoid blocking
-                thread = threading.Thread(target=send_message)
-                thread.start()
-                thread.join(timeout=1)  # Wait max 1 second
-                
-            except Exception as e:
-                print(f"Error setting up WebSocket send: {e}")
-                disconnected.append(ws)
-        
-        # Remove disconnected clients
-        for ws in disconnected:
-            try:
-                event_chat_connections[event_id].remove(ws)
-            except ValueError:
-                pass
-    else:
-        print(f"No WebSocket connections found for event {event_id}")
-    
-    return {"message": "Message sent successfully"}
-
-@router.websocket("/{event_id}/chat/ws")
-async def event_chat_websocket(
-    websocket: WebSocket,
-    event_id: int,
-    token: str,
-    db: Session = Depends(get_db)
-):
-    """WebSocket endpoint for event chat"""
-    
-    try:
-        # Verify token
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id = payload.get("user_id")
-        
-        if not user_id:
-            await websocket.close(code=4001, reason="Invalid token")
-            return
-        
-        # Check if user has access to this event chat
-        user_like = db.query(models.EventLike).filter(
-            and_(
-                models.EventLike.user_id == user_id,
-                models.EventLike.event_id == event_id
-            )
-        ).first()
-        
-        if not user_like:
-            await websocket.close(code=4003, reason="Access denied")
-            return
-        
-        # Accept connection
-        await websocket.accept()
-        
-        # Add to connections
-        if event_id not in event_chat_connections:
-            event_chat_connections[event_id] = []
-        event_chat_connections[event_id].append(websocket)
-        
-        print(f"User {user_id} connected to event {event_id} chat. Total connections: {len(event_chat_connections[event_id])}")
-        
-        # Keep connection alive - FIXED VERSION (no ping)
-        try:
-            while True:
-                # Just wait for messages or disconnection
-                # The connection will stay alive automatically
-                message = await websocket.receive_text()
-                # We don't process messages here since we send via HTTP POST
-                # But receiving keeps the connection alive
-                print(f"Received WebSocket message (ignored): {message}")
-                
-        except WebSocketDisconnect:
-            print(f"User {user_id} disconnected from event {event_id} chat")
-            
-    except jwt.PyJWTError:
-        try:
-            await websocket.close(code=4001, reason="Invalid token")
-        except:
-            pass  # Connection might already be closed
-    except Exception as e:
-        print(f"WebSocket error: {e}")
-        try:
-            await websocket.close(code=4000, reason="Server error")
-        except:
-            pass  # Connection might already be closed
-    finally:
-        # Remove from connections
-        if event_id in event_chat_connections:
-            try:
-                event_chat_connections[event_id].remove(websocket)
-                if not event_chat_connections[event_id]:
-                    del event_chat_connections[event_id]
-                print(f"Cleaned up connection for event {event_id}")
-            except ValueError:
-                pass
+    # Return the created message
+    return {
+        "id": new_message.id,
+        "content": new_message.content,
+        "sent_at": new_message.sent_at.isoformat(),
+        "sender": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "profile_picture": current_user.profile_picture
+        },
+        "message": "Message sent successfully"
+    }

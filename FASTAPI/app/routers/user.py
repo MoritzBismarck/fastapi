@@ -96,19 +96,16 @@ def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oau
 
 # Update FASTAPI/app/routers/user.py - Replace the get_users_overview function
 
+# Replace your get_users_overview function in FASTAPI/app/routers/user.py with this fixed version:
+
+# Replace your get_users_overview function with this version that ensures 
+# friends-of-friends appear in suggested users:
+
 @router.get("/overview", response_model=schemas.FriendsOverview)
 def get_users_overview(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    # Get all users EXCEPT public users and the current user
-    users = db.query(models.User).filter(
-        and_(
-            models.User.id != current_user.id,
-            models.User.is_public == False
-        )
-    ).all()
-    
     # Get all friendships involving the current user
     friendships = db.query(models.Friendship).filter(
         or_(
@@ -125,6 +122,47 @@ def get_users_overview(
                 current_user_friends.add(friendship.addressee_id)
             else:
                 current_user_friends.add(friendship.requester_id)
+    
+    # Get friends of friends (potential suggested users with mutual friends)
+    friends_of_friends = set()
+    if current_user_friends:
+        # For each of current user's friends, get their friends
+        for friend_id in current_user_friends:
+            friend_friendships = db.query(models.Friendship).filter(
+                and_(
+                    or_(
+                        models.Friendship.requester_id == friend_id,
+                        models.Friendship.addressee_id == friend_id
+                    ),
+                    models.Friendship.status == "accepted"
+                )
+            ).all()
+            
+            for ff in friend_friendships:
+                other_friend_id = ff.addressee_id if ff.requester_id == friend_id else ff.requester_id
+                if other_friend_id != current_user.id and other_friend_id not in current_user_friends:
+                    friends_of_friends.add(other_friend_id)
+    
+    # Get all users EXCEPT public users and the current user
+    # PRIORITIZE friends of friends in the results
+    suggested_user_ids = friends_of_friends if friends_of_friends else set()
+    
+    # Add other non-friend users to fill the suggestions
+    all_other_users = db.query(models.User.id).filter(
+        and_(
+            models.User.id != current_user.id,
+            models.User.is_public == False,
+            ~models.User.id.in_(current_user_friends)  # Not already friends
+        )
+    ).all()
+    
+    for user_tuple in all_other_users:
+        suggested_user_ids.add(user_tuple[0])
+    
+    # Get the actual user objects
+    users = db.query(models.User).filter(
+        models.User.id.in_(suggested_user_ids)
+    ).all() if suggested_user_ids else []
     
     # Function to get mutual friends details
     def get_mutual_friends_details(user_id: int) -> list:
@@ -175,20 +213,22 @@ def get_users_overview(
         sent_friendship = next((f for f in friendships if f.requester_id == current_user.id and f.addressee_id == user.id), None)
         received_friendship = next((f for f in friendships if f.requester_id == user.id and f.addressee_id == current_user.id), None)
         
+        # Skip if already friends - they'll be in the friends section
+        if sent_friendship and sent_friendship.status == "accepted":
+            continue
+        if received_friendship and received_friendship.status == "accepted":
+            continue
+            
         # Determine relationship status
         if sent_friendship:
-            if sent_friendship.status == "accepted":
-                continue  # Skip - they're already friends (will be in friends list)
-            elif sent_friendship.status == "pending":
+            if sent_friendship.status == "pending":
                 relationship = "request_sent"
                 friendship = sent_friendship
             else:  # rejected
                 relationship = "none"
                 friendship = None
         elif received_friendship:
-            if received_friendship.status == "accepted":
-                continue  # Skip - they're already friends
-            elif received_friendship.status == "pending":
+            if received_friendship.status == "pending":
                 relationship = "request_received"
                 friendship = received_friendship
             else:  # rejected
@@ -205,7 +245,6 @@ def get_users_overview(
         same_time_join = False
         if current_user.invitation_token_id and user.invitation_token_id:
             if current_user.invitation_token_id == user.invitation_token_id:
-                # Same QR code
                 time_diff = abs((user.created_at - current_user.created_at).total_seconds())
                 same_time_join = time_diff <= 86400  # 24 hours in seconds
         
@@ -225,15 +264,12 @@ def get_users_overview(
             "same_time_join": same_time_join
         })
     
-    # Sort users: 
-    # 1. Those with most mutual friends first
-    # 2. If no mutual friends, those who joined using same QR code around same time
-    # 3. Then by username alphabetically
+    # Sort users: Those with most mutual friends first
     def sort_key(user):
         return (
-            -len(user["mutual_friends"]),  # More mutual friends first (negative for desc)
-            not user["same_time_join"],    # Same time joiners first (False < True)
-            user["username"].lower()       # Alphabetical as final tiebreaker
+            -len(user["mutual_friends"]),  # More mutual friends first
+            not user["same_time_join"],    # Same time joiners first  
+            user["username"].lower()       # Alphabetical
         )
     
     processed_users.sort(key=sort_key)
@@ -242,12 +278,10 @@ def get_users_overview(
     established_friendships = []
     for f in friendships:
         if f.status == "accepted":
-            # Get the friend user (the one who isn't the current user)
             friend_id = f.addressee_id if f.requester_id == current_user.id else f.requester_id
             friend = db.query(models.User).filter(models.User.id == friend_id).first()
             
             if friend:
-                # Get mutual friends for this friend
                 friend_mutual_friends = get_mutual_friends_details(friend.id)
                 
                 established_friendships.append({
@@ -266,7 +300,6 @@ def get_users_overview(
                     "updated_at": f.updated_at.isoformat()
                 })
     
-    # Sort friends by most mutual friends first
     established_friendships.sort(key=lambda f: -len(f["friend"]["mutual_friends"]))
     
     return {

@@ -189,17 +189,17 @@ class MatchParticipant(Base):
     match        = relationship('Match', back_populates='participants')
     user         = relationship('User', back_populates='matches')
 
-class ChatMessage(Base):
-    __tablename__ = 'chat_messages'
+class EventMessage(Base):
+    __tablename__ = 'event_messages'
 
     id           = Column(Integer, primary_key=True, nullable=False)
-    match_id     = Column(Integer, ForeignKey('matches.id', ondelete='CASCADE'), nullable=False)
+    event_id     = Column(Integer, ForeignKey('events.id', ondelete='CASCADE'), nullable=False)
     sender_id    = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     content      = Column(String, nullable=False)
     sent_at      = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
-    match        = relationship('Match', backref='messages')
-    sender       = relationship('User')
+    event        = relationship('Event', backref='event_messages')
+    sender       = relationship('User', backref='event_messages')
 
 class EventEdit(Base):
     __tablename__ = 'event_edits'
