@@ -357,3 +357,108 @@ class UserProfile(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class FeatureBase(BaseModel):
+    title: str
+    description: str
+
+class FeatureCreate(FeatureBase):
+    pass
+
+class FeatureResponse(FeatureBase):
+    id: int
+    vote_count: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    user_has_voted: bool = False  # Will be populated in the API response
+    
+    class Config:
+        from_attributes = True
+
+class FeatureVoteResponse(BaseModel):
+    user_id: int
+    feature_id: int
+    voted_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# User voting summary for validation
+class UserVoteSummary(BaseModel):
+    total_votes: int
+    remaining_votes: int
+    voted_features: List[int]
+
+# Comment System Schemas
+class CommentBase(BaseModel):
+    content: str
+
+class CommentCreate(CommentBase):
+    pass
+
+class CommentReplyBase(BaseModel):
+    content: str
+
+class CommentReplyCreate(CommentReplyBase):
+    pass
+
+# Author info for comments
+class CommentAuthor(BaseModel):
+    id: int
+    username: str
+    profile_picture: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class CommentReplyResponse(CommentReplyBase):
+    id: int
+    comment_id: int
+    author_id: int
+    like_count: int
+    created_at: datetime
+    updated_at: datetime
+    author: CommentAuthor
+    user_has_liked: bool = False  # Will be populated in API response
+    
+    class Config:
+        from_attributes = True
+
+class CommentResponse(CommentBase):
+    id: int
+    author_id: int
+    like_count: int
+    reply_count: int
+    created_at: datetime
+    updated_at: datetime
+    author: CommentAuthor
+    user_has_liked: bool = False  # Will be populated in API response
+    replies: List[CommentReplyResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+# Like responses
+class CommentLikeResponse(BaseModel):
+    user_id: int
+    comment_id: int
+    liked_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class CommentReplyLikeResponse(BaseModel):
+    user_id: int
+    reply_id: int
+    liked_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Combined Response for the Request for Comment page
+class RequestForCommentResponse(BaseModel):
+    features: List[FeatureResponse]
+    user_vote_summary: UserVoteSummary
+    comments: List[CommentResponse]

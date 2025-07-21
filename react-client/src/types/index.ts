@@ -159,3 +159,72 @@ export interface SendMessageResponse {
 export interface CreateMessageRequest {
   content: string;
 }
+
+// Create new file: react-client/src/types/rfc.ts
+
+export interface Feature {
+  id: number;
+  title: string;
+  description: string;
+  vote_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  user_has_voted: boolean;
+}
+
+export interface UserVoteSummary {
+  total_votes: number;
+  remaining_votes: number;
+  voted_features: number[];
+}
+
+export interface CommentAuthor {
+  id: number;
+  username: string;
+  profile_picture?: string;
+}
+
+export interface CommentReply {
+  id: number;
+  content: string;
+  comment_id: number;
+  author_id: number;
+  like_count: number;
+  created_at: string;
+  updated_at: string;
+  author: CommentAuthor;
+  user_has_liked: boolean;
+}
+
+export interface Comment {
+  id: number;
+  content: string;
+  author_id: number;
+  like_count: number;
+  reply_count: number;
+  created_at: string;
+  updated_at: string;
+  author: CommentAuthor;
+  user_has_liked: boolean;
+  replies: CommentReply[];
+}
+
+export interface RequestForCommentData {
+  features: Feature[];
+  user_vote_summary: UserVoteSummary;
+  comments: Comment[];
+}
+
+export interface CreateFeatureRequest {
+  title: string;
+  description: string;
+}
+
+export interface CreateCommentRequest {
+  content: string;
+}
+
+export interface CreateReplyRequest {
+  content: string;
+}

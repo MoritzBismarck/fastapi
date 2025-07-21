@@ -50,6 +50,12 @@ class User(Base):
     )
     is_public = Column(Boolean, nullable=False, server_default="FALSE") 
 
+    feature_votes = relationship('FeatureVote', back_populates='user')
+
+# Comment system relationships  
+    comment_likes = relationship('CommentLike', back_populates='user')
+    comment_reply_likes = relationship('CommentReplyLike', back_populates='user')
+
 
 class Friendship(Base):
     __tablename__ = "friendships"
@@ -228,6 +234,101 @@ class ChatSession(Base):
     # Relationships
     caretaker = relationship("User", foreign_keys=[caretaker_id])
     helpseeker = relationship("User", foreign_keys=[helpseeker_id])
+
+class Feature(Base):
+    __tablename__ = 'features'
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    vote_count = Column(Integer, nullable=False, server_default='0')
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'), onupdate=text('now()'))
+    
+    # Admin/creator who added this feature
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    
+    # Relationships
+    creator = relationship('User', backref='created_features')
+    votes = relationship('FeatureVote', back_populates='feature', cascade='all, delete-orphan')
+
+class FeatureVote(Base):
+    __tablename__ = 'feature_votes'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'feature_id', name='uc_feature_vote_user_feature'),
+    )
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    feature_id = Column(Integer, ForeignKey('features.id', ondelete='CASCADE'), primary_key=True)
+    voted_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    user = relationship('User', back_populates='feature_votes')
+    feature = relationship('Feature', back_populates='votes')
+
+# Comment System Models
+class Comment(Base):
+    __tablename__ = 'comments'
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    content = Column(String, nullable=False)
+    like_count = Column(Integer, nullable=False, server_default='0')
+    reply_count = Column(Integer, nullable=False, server_default='0')
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'), onupdate=text('now()'))
+    
+    # Author
+    author_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    
+    # Relationships
+    author = relationship('User', backref='comments')
+    replies = relationship('CommentReply', back_populates='comment', cascade='all, delete-orphan')
+    likes = relationship('CommentLike', back_populates='comment', cascade='all, delete-orphan')
+
+class CommentReply(Base):
+    __tablename__ = 'comment_replies'
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    content = Column(String, nullable=False)
+    like_count = Column(Integer, nullable=False, server_default='0')
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'), onupdate=text('now()'))
+    
+    # Parent comment
+    comment_id = Column(Integer, ForeignKey('comments.id', ondelete='CASCADE'), nullable=False)
+    
+    # Author
+    author_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    
+    # Relationships
+    comment = relationship('Comment', back_populates='replies')
+    author = relationship('User', backref='comment_replies')
+    likes = relationship('CommentReplyLike', back_populates='reply', cascade='all, delete-orphan')
+
+class CommentLike(Base):
+    __tablename__ = 'comment_likes'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'comment_id', name='uc_comment_like_user_comment'),
+    )
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    comment_id = Column(Integer, ForeignKey('comments.id', ondelete='CASCADE'), primary_key=True)
+    liked_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    user = relationship('User', back_populates='comment_likes')
+    comment = relationship('Comment', back_populates='likes')
+
+class CommentReplyLike(Base):
+    __tablename__ = 'comment_reply_likes'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'reply_id', name='uc_reply_like_user_reply'),
+    )
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    reply_id = Column(Integer, ForeignKey('comment_replies.id', ondelete='CASCADE'), primary_key=True)
+    liked_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+    user = relationship('User', back_populates='comment_reply_likes')
+    reply = relationship('CommentReply', back_populates='likes')
 
 User.created_events = relationship('Event', back_populates='creator')
 User.likes          = relationship('EventLike', back_populates='user')

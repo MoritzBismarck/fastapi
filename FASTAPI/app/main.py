@@ -1,7 +1,7 @@
 from fastapi import Body, FastAPI
 from . import models
 from .database import engine
-from .routers import post, user, auth, friendship, event, notification, invitation, chat
+from .routers import post, user, auth, friendship, event, notification, invitation, chat, rfc
 from pydantic_settings import BaseSettings
 from .config import Settings
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +33,7 @@ app.include_router(event.router)
 app.include_router(notification.router)
 app.include_router(invitation.router)
 app.include_router(chat.router)
+app.include_router(rfc.router)
 
 @app.get("/")
 def root():
