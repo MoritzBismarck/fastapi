@@ -42,7 +42,7 @@ def create_event(
     db.refresh(new_event)
     
     # Automatically create a like for PRIVATE events (creator always likes their own private events)
-    if current_user.is_public == 'FALSE':
+    if not current_user.is_public:
         creator_like = models.EventLike(
             user_id=current_user.id,
             event_id=new_event.id

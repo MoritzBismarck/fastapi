@@ -1,4 +1,4 @@
-# Create new file: FASTAPI/app/services/match_service.py
+# FASTAPI/app/services/match_service.py - Fixed version
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
@@ -45,10 +45,9 @@ class MatchService:
                     context=match_context
                 )
                 db.add(new_match)
-                db.commit()
-                db.refresh(new_match)
+                db.flush()  # Get the ID
                 
-                # Add both users as participants
+                # Add participants
                 participant1 = models.MatchParticipant(
                     match_id=new_match.id,
                     user_id=user_id
@@ -60,31 +59,14 @@ class MatchService:
                 
                 db.add(participant1)
                 db.add(participant2)
-                db.commit()
-                
-                matches_created.append(new_match)
+                matches_created.append(new_match.id)
         
+        db.commit()
         return matches_created
     
     @staticmethod
-    def get_user_matches(db: Session, user_id: int, limit: int = 20, skip: int = 0):
-        """Get all matches for a user with pagination"""
-        
-        matches = db.query(models.Match).join(
-            models.MatchParticipant
-        ).filter(
-            models.MatchParticipant.user_id == user_id
-        ).order_by(
-            models.Match.last_message_at.desc().nullslast(),
-            models.Match.created_at.desc()
-        ).offset(skip).limit(limit).all()
-        
-        return matches
-    
-    @staticmethod
-    def get_match_participants(db: Session, match_id: int):
+    def get_match_participants(db: Session, match_id: int) -> List[models.User]:
         """Get all participants in a match"""
-        
         participants = db.query(models.User).join(
             models.MatchParticipant
         ).filter(
@@ -96,10 +78,11 @@ class MatchService:
     @staticmethod
     def delete_matches_for_event_unlike(db: Session, user_id: int, event_id: int):
         """
-        Smart match management when a user unlikes an event:
+        FIXED: Smart match management when a user unlikes an event:
         - Remove only the user who unliked from matches
         - Keep matches alive if other participants remain
         - Only delete match completely if it becomes empty or has only 1 person left
+        - REMOVED ChatMessage logic since we now use EventMessage for direct event messaging
         """
         
         # Find all matches for this event that include this user
@@ -132,10 +115,8 @@ class MatchService:
                     models.MatchParticipant.match_id == match.id
                 ).delete()
                 
-                # Delete all chat messages for this match
-                db.query(models.ChatMessage).filter(
-                    models.ChatMessage.match_id == match.id
-                ).delete()
+                # REMOVED: Chat message deletion since we use direct event messaging now
+                # The event messages are tied to events, not matches, so they don't need cleanup
                 
                 # Delete the match itself
                 db.query(models.Match).filter(
@@ -161,16 +142,8 @@ class MatchService:
                     'remaining_participants': participant_count - 1
                 })
                 
-                # Add a system message to the chat notifying that user left
-                # (Optional - for transparency)
-                user = db.query(models.User).filter(models.User.id == user_id).first()
-                if user:
-                    system_message = models.ChatMessage(
-                        match_id=match.id,
-                        sender_id=user_id,  # Or create a system user
-                        content=f"📢 {user.username} has left the event chat."
-                    )
-                    db.add(system_message)
+                # REMOVED: System message logic since we're not using match-based chat anymore
+                # Event messages are now direct to events, so no system messages needed for matches
         
         db.commit()
         
@@ -179,6 +152,7 @@ class MatchService:
             'matches_deleted': matches_deleted,
             'participants_removed': participants_removed
         }
+    
     @staticmethod
     def get_match_participants_count(db: Session, match_id: int) -> int:
         """Get the number of participants in a match"""
@@ -247,15 +221,8 @@ class MatchService:
                 db.add(new_participant)
                 matches_joined.append(match.id)
                 
-                # Add a system message to notify other participants
-                user = db.query(models.User).filter(models.User.id == user_id).first()
-                if user:
-                    system_message = models.ChatMessage(
-                        match_id=match.id,
-                        sender_id=user_id,  # Or create a system user
-                        content=f"🎉 {user.username} has joined the event chat!"
-                    )
-                    db.add(system_message)
+                # REMOVED: System message logic since we're using direct event messaging now
+                # No need to add system messages to matches since chat is event-based
         
         db.commit()
         return matches_joined
