@@ -12,24 +12,9 @@ event_status     = ENUM('ACTIVE', 'CANCELLED', 'DELETED', name='event_status', c
 rsvp_status      = ENUM('INTERESTED', 'GOING', 'CANCELLED', name='rsvp_status', create_type=False)
 match_context    = Enum('PUBLIC', 'PRIVATE', 'FRIENDS', name='match_context', create_type=False)
 
-
-class Post(Base):
-    __tablename__ = "posts"
-    id = Column(Integer, primary_key=True, nullable=False)
-    title = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    published = Column(Boolean, server_default="True", nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
-
-    owner_id = Column(Integer, ForeignKey(("users.id"), ondelete="CASCADE"), nullable=False) 
-
-    owner = relationship("User")
-
-
-# Update in FASTAPI/app/models.py - in the User class
-
 class User(Base):
     __tablename__ = "users"
+    
     id = Column(Integer, primary_key=True, nullable=False)
     username = Column(String, nullable=True, unique=True)
     email = Column(String, nullable=False, unique=True)
@@ -38,24 +23,24 @@ class User(Base):
     last_name = Column(String, nullable=True)
     profile_picture = Column(String, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
-    
-    # Add this field to track which invitation token was used
+
+    # REMOVED CIRCULAR DEPENDENCY - no invitation_token_id column
+    # invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
     invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
     
-    # Add this relationship
-    invitation_token = relationship(
-    "InvitationToken", 
-    foreign_keys=[invitation_token_id],
-    back_populates="invited_users"
-    )
     is_public = Column(Boolean, nullable=False, server_default="FALSE") 
 
+    # Relationships
+    created_events = relationship('Event', back_populates='creator')
+    likes = relationship('EventLike', back_populates='user')
+    rsvps = relationship('RSVP', back_populates='user')
+    matches = relationship('MatchParticipant', back_populates='user')
     feature_votes = relationship('FeatureVote', back_populates='user')
-
-# Comment system relationships  
     comment_likes = relationship('CommentLike', back_populates='user')
     comment_reply_likes = relationship('CommentReplyLike', back_populates='user')
-
+    
+    # Invitation tokens created by this user (not used by this user)
+    invitation_token = relationship("InvitationToken", foreign_keys=[invitation_token_id], post_update=True)
 
 class Friendship(Base):
     __tablename__ = "friendships"
@@ -86,12 +71,27 @@ class InvitationToken(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Made nullable for first admin
     expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     session_token = Column(String, nullable=True)
-    invited_users = relationship(
-    "User", 
-    foreign_keys="User.invitation_token_id",
-    back_populates="invitation_token"
-)
+    
+    # REMOVED CIRCULAR DEPENDENCY - no invited_users relationship
+    # invited_users = relationship("User", foreign_keys="User.invitation_token_id", back_populates="invitation_token")
+    
+    # Keep creator relationship (this direction is fine)
+    creator = relationship("User", foreign_keys=[created_by], backref="created_invitation_tokens")
 
+# OPTIONAL: If you need to track which invitation was used by which user
+class UserInvitation(Base):
+    __tablename__ = "user_invitations"
+    id = Column(Integer, primary_key=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="CASCADE"), nullable=False)
+    used_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    
+    user = relationship("User", backref="used_invitations")
+    invitation_token = relationship("InvitationToken", backref="user_usages")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'invitation_token_id', name='uc_user_invitation'),
+    )
 
 class Event(Base):
     __tablename__ = 'events'
@@ -128,6 +128,13 @@ class Event(Base):
     # Ownership
     creator_id       = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     creator          = relationship('User', back_populates='created_events')
+    
+    # CASCADE RELATIONSHIPS - These ensure proper deletion
+    event_likes      = relationship('EventLike', back_populates='event', cascade='all, delete-orphan')
+    event_rsvps      = relationship('RSVP', back_populates='event', cascade='all, delete-orphan')
+    event_matches    = relationship('Match', back_populates='event', cascade='all, delete-orphan')
+    event_messages   = relationship('EventMessage', back_populates='event', cascade='all, delete-orphan')
+    event_edits      = relationship('EventEdit', back_populates='event', cascade='all, delete-orphan')
 
 class EventLike(Base):
     __tablename__ = 'event_likes'
@@ -140,7 +147,7 @@ class EventLike(Base):
     liked_at  = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
     user      = relationship('User', back_populates='likes')
-    event     = relationship('Event', backref='likes')
+    event     = relationship('Event', back_populates='event_likes')
     
 class Notification(Base):
     __tablename__ = "notifications"
@@ -154,7 +161,6 @@ class Notification(Base):
     # Define relationship
     user = relationship("User")
 
-
 class RSVP(Base):
     __tablename__ = 'rsvps'
     __table_args__ = (
@@ -167,7 +173,7 @@ class RSVP(Base):
     responded_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
     user         = relationship('User', back_populates='rsvps')
-    event        = relationship('Event', backref='rsvps')
+    event        = relationship('Event', back_populates='event_rsvps')
 
 class Match(Base):
     __tablename__ = 'matches'
@@ -178,8 +184,8 @@ class Match(Base):
     created_at        = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     last_message_at   = Column(TIMESTAMP(timezone=True), nullable=True)
 
-    event             = relationship('Event', backref='matches')
-    participants      = relationship('MatchParticipant', back_populates='match')
+    event             = relationship('Event', back_populates='event_matches')
+    participants      = relationship('MatchParticipant', back_populates='match', cascade='all, delete-orphan')
 
 class MatchParticipant(Base):
     __tablename__ = 'match_participants'
@@ -204,7 +210,7 @@ class EventMessage(Base):
     content      = Column(String, nullable=False)
     sent_at      = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
-    event        = relationship('Event', backref='event_messages')
+    event        = relationship('Event', back_populates='event_messages')
     sender       = relationship('User', backref='event_messages')
 
 class EventEdit(Base):
@@ -216,9 +222,8 @@ class EventEdit(Base):
     changed_fields = Column(String, nullable=False)  # simplified to text: e.g. 'time=20:00'
     created_at     = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
-    event          = relationship('Event', backref='edits')
+    event          = relationship('Event', back_populates='event_edits')
     editor         = relationship('User')
-
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
@@ -329,8 +334,3 @@ class CommentReplyLike(Base):
 
     user = relationship('User', back_populates='comment_reply_likes')
     reply = relationship('CommentReply', back_populates='likes')
-
-User.created_events = relationship('Event', back_populates='creator')
-User.likes          = relationship('EventLike', back_populates='user')
-User.rsvps          = relationship('RSVP', back_populates='user')
-User.matches        = relationship('MatchParticipant', back_populates='user')

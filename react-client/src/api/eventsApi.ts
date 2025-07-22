@@ -86,3 +86,19 @@ export const getEventMessages = async (eventId: number, limit: number = 50): Pro
 export const sendEventMessage = async (eventId: number, content: string): Promise<SendMessageResponse> => {
   return post(`/events/${eventId}/messages`, { content });
 };
+
+export const getUserOwnEvents = async (
+  limit: number = 20,
+  skip: number = 0
+): Promise<Event[]> => {
+  const query = new URLSearchParams({
+    limit: limit.toString(),
+    skip: skip.toString()
+  });
+  
+  return getRequest<Event[]>(`/events/own?${query}`);
+};
+
+export const deleteEvent = async (eventId: number): Promise<void> => {
+  return del(`/events/${eventId}`);
+};

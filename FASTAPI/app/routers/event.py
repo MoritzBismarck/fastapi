@@ -19,6 +19,68 @@ router = APIRouter(
     tags=["events"]
 )
 
+# Replace the delete endpoint in FASTAPI/app/routers/event.py
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Delete an event - only the creator can delete their event"""
+    
+    # Get the event
+    event = db.query(models.Event).filter(models.Event.id == id).first()
+    
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {id} not found"
+        )
+    
+    # Check if current user is the creator
+    if event.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own events"
+        )
+    
+    try:
+        # Manually delete related records first to avoid cascade issues
+        
+        # Delete event messages
+        db.query(models.EventMessage).filter(models.EventMessage.event_id == id).delete()
+        
+        # Delete match participants for matches related to this event
+        match_ids = db.query(models.Match.id).filter(models.Match.event_id == id).subquery()
+        db.query(models.MatchParticipant).filter(models.MatchParticipant.match_id.in_(match_ids)).delete(synchronize_session=False)
+        
+        # Delete matches
+        db.query(models.Match).filter(models.Match.event_id == id).delete()
+        
+        # Delete RSVPs
+        db.query(models.RSVP).filter(models.RSVP.event_id == id).delete()
+        
+        # Delete event likes
+        db.query(models.EventLike).filter(models.EventLike.event_id == id).delete()
+        
+        # Delete event edits
+        db.query(models.EventEdit).filter(models.EventEdit.event_id == id).delete()
+        
+        # Finally, delete the event
+        db.delete(event)
+        db.commit()
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting event: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while deleting the event"
+        )
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=schemas.EventResponse)
 def create_event(
     event: schemas.EventCreate,
@@ -278,6 +340,94 @@ def get_events(
 
 # Fix for FASTAPI/app/routers/event.py - get_user_matches function
 # Replace the existing get_user_matches function with this fixed version
+
+# Add this endpoint to FASTAPI/app/routers/event.py
+
+@router.get("/own", response_model=List[schemas.EventWithLikedUsers])
+def get_user_own_events(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user),
+    limit: int = 20,
+    skip: int = 0
+):
+    """Get events created by the current user"""
+    
+    # Get events created by current user, ordered by start_date descending (newest first)
+    events = db.query(models.Event).filter(
+        models.Event.creator_id == current_user.id
+    ).order_by(models.Event.start_date.desc()).offset(skip).limit(limit).all()
+    
+    result = []
+    for event in events:
+        # Get users who have liked this event (for match context)
+        liked_users = db.query(models.User).join(
+            models.EventLike,
+            models.EventLike.user_id == models.User.id
+        ).filter(
+            models.EventLike.event_id == event.id
+        ).all()
+        
+        # Get RSVPs for this event
+        rsvps = db.query(models.RSVP).filter(
+            models.RSVP.event_id == event.id
+        ).all()
+        
+        # Current user always "likes" their own event for UI purposes
+        user_liked = True
+        
+        # Creator info (current user)
+        creator_info = {
+            "id": current_user.id,
+            "username": current_user.username,
+            "profile_picture": current_user.profile_picture
+        }
+        
+        # Check if current user has RSVP'd to their own event
+        current_rsvp = db.query(models.RSVP).filter(
+            and_(
+                models.RSVP.user_id == current_user.id,
+                models.RSVP.event_id == event.id
+            )
+        ).first()
+        
+        current_rsvp_data = None
+        if current_rsvp:
+            current_rsvp_data = {
+                "status": current_rsvp.status,
+                "responded_at": current_rsvp.responded_at.isoformat()
+            }
+        
+        # Create result dictionary
+        event_dict = {
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_date": event.start_date,
+            "end_date": event.end_date,
+            "start_time": event.start_time,
+            "end_time": event.end_time,
+            "location": event.location,
+            "cover_photo_url": event.cover_photo_url,
+            "guest_limit": event.guest_limit,
+            "rsvp_close_time": event.rsvp_close_time,
+            "visibility": event.visibility,
+            "interested_count": event.interested_count,
+            "going_count": event.going_count,
+            "status": event.status,
+            "created_at": event.created_at,
+            "updated_at": event.updated_at,
+            "last_edited_at": event.last_edited_at,
+            "creator_id": event.creator_id,
+            "liked_by_current_user": user_liked,
+            "liked_by_friends": liked_users,  # Users who liked the event
+            "creator": creator_info,
+            "current_user_rsvp": current_rsvp_data
+        }
+        
+        result.append(event_dict)
+    
+    return result
+
 
 @router.get("/matches")
 def get_user_matches(
@@ -633,6 +783,8 @@ def like_event(
     NotificationService.notify_event_match(db=db, user_id=current_user.id, event_id=id)
     
     return {"message": "Event liked successfully"}
+
+
 
 def get_friends_who_liked_event(db: Session, user_id: int, event_id: int):
     """
@@ -1098,3 +1250,5 @@ def send_event_message(
         },
         "message": "Message sent successfully"
     }
+
+

@@ -351,7 +351,7 @@ const MatchedEvents: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold mb-4">{events.length} Matches</h2>
+          <h2 className="text-xl font-bold mb-4">{events.length} Match/es</h2>
           
           {events.map((event) => {
             const isExpanded = expandedEventId === event.id;
