@@ -108,10 +108,10 @@ const Events: React.FC<EventsProps> = ({ initialCreating = false }) => {
 
       <EventsHeader
         isCreating={isCreatingEvent}
-        onToggleCreate={!isLikedView ? toggleEventCreation : undefined}
+        onToggleCreate={toggleEventCreation}
       />
 
-      {isCreatingEvent && !isLikedView ? (
+      {isCreatingEvent ? (
         <CreateEventForm onEventCreated={handleEventCreated} onCancel={toggleEventCreation} />
       ) : isLoading ? (
         <div className="p-4 border border-gray-300 text-center">

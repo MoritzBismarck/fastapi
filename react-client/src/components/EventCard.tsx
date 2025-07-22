@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Event } from '../types';
-import FriendsLikedButton from './FriendsLikedButton';
 
 interface EventCardProps {
   event: Event;
@@ -11,16 +10,7 @@ interface EventCardProps {
 }
 
 const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showActionButtons = true }) => {
-  const [isShowingDetails, setIsShowingDetails] = useState(false);
-  
-  const toggleDetails = () => {
-    setIsShowingDetails(!isShowingDetails);
-  };
-
-  const handleUserClick = (user: any) => {
-    // You can add navigation to user profile here if needed
-    console.log('User clicked:', user);
-  };
+  const [showDetails, setShowDetails] = useState(false);
 
   // Format date and time for display
   const formatDateTime = () => {
@@ -29,140 +19,188 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
       month: 'short',
       day: 'numeric',
       year: 'numeric'
-    }).replace(',', '');
+    });
 
-    if (event.start_time) {
-      let timeStr = event.start_time;
-      if (event.end_time) {
-        timeStr += ` – ${event.end_time}`;
-      }
-      return { date: dateStr, time: timeStr };
-    }
-    
-    return { date: dateStr, time: 'All day' };
+    const timeStr = event.start_time 
+      ? `${event.start_time}${event.end_time ? ` - ${event.end_time}` : ''}`
+      : 'All day';
+
+    return { date: dateStr, time: timeStr };
   };
 
   const { date, time } = formatDateTime();
 
   return (
-    <div className="max-w-sm mx-auto bg-[#C5C5C5] rounded-3xl p-3 shadow-lg border-black border-2">
-      <div className="rounded-2xl overflow-hidden border-2 border-gray-200 bg-black">
-        {/* MAIN IMAGE AREA */}
-        <div className="relative">
-          <img 
-            src={event.cover_photo_url || '/placeholder.jpg'} 
-            alt={event.title}
-            className="w-full aspect-[3/4] object-cover"
-          />
-          
-          {/* FRIENDS AVATARS OVERLAY - Using the new component */}
-          {/* {event.liked_by_friends && event.liked_by_friends.length > 0 && (
-            <div className="absolute top-4 left-4">
-              <FriendsLikedButton
-                friends={event.liked_by_friends}
-                onUserClick={handleUserClick}
-              />
+    <div className="max-w-sm mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Image Container - Vertical aspect ratio */}
+      <div className="relative aspect-[3/5] bg-gray-200">
+        <img 
+          src={event.cover_photo_url || '/placeholder.jpg'} 
+          alt={event.title}
+          className="w-full h-full object-cover"
+        />
+        
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        
+        {/* Details button - More prominent */}
+        <button 
+          onClick={() => setShowDetails(true)}
+          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2"
+        >
+          <span>ℹ️</span>
+          <span>Details</span>
+        </button>
+        
+        {/* Basic event info overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="text-white">
+            <h2 className="text-2xl font-bold mb-2">{event.title}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">📍</span>
+              <p className="text-base">{event.location}</p>
             </div>
-          )} */}
-          
-          {/* DATE/TIME OVERLAY */}
-          <div className="absolute top-4 right-4 text-right">
-            <div className="text-white font-mono text-sm">
-              {date}
-              <br />
-              {time}
+            <div className="flex items-center gap-2">
+              <span className="text-base">📅</span>
+              <p className="text-base">{date} • {time}</p>
             </div>
           </div>
-          
-          {/* CONTENT OVERLAY - CONDITIONAL BASED ON DETAILS VIEW */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-            {!isShowingDetails ? (
-              /* TITLE VIEW */
-              <>
-                <h2 className="text-white text-xl font-bold mb-1">
-                  {event.title}
-                </h2>
-                <p className="text-white text-sm mb-2">
-                  📍 {event.location}
-                </p>
-                {event.description && (
-                  <p className="text-white text-sm line-clamp-2">
-                    {event.description}
+        </div>
+        
+        {/* Full details modal overlay */}
+        {showDetails && (
+          <div className="absolute inset-0 bg-white z-50 overflow-y-auto">
+            {/* Header with close button */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">Event Details</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Details content */}
+            <div className="p-6 space-y-6">
+              {/* <div className="relative h-48 rounded-lg overflow-hidden">
+                <img 
+                  src={event.cover_photo_url || '/placeholder.jpg'} 
+                  alt={event.title}
+                  className="w-full h-full object-cover"
+                />
+              </div> */}
+
+              {/* Title and visibility */}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h2>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                  event.visibility === 'PRIVATE' 
+                    ? 'bg-purple-100 text-purple-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {event.visibility === 'PRIVATE' ? '🔒 Private' : '🌍 Public'}
+                </span>
+              </div>
+              
+              {/* Time & Date */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>📅</span> When
+                </h4>
+                <p className="text-gray-700">{date}</p>
+                <p className="text-gray-700">{time}</p>
+                {event.end_date && event.end_date !== event.start_date && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ends: {new Date(event.end_date).toLocaleDateString()}
                   </p>
                 )}
-              </>
-            ) : (
-              /* DETAILS VIEW */
-              <div className="text-white">
-                <div className="mb-2">
-                  <div className="font-bold text-sm uppercase">Title:</div>
-                  <div className="text-lg font-bold">{event.title}</div>
-                </div>
-                
-                <div className="mb-2">
-                  <div className="font-bold text-sm uppercase">When:</div>
-                  <div>{date}</div>
-                  <div>{time}</div>
-                </div>
-                
-                <div className="mb-2">
-                  <div className="font-bold text-sm uppercase">Location:</div>
-                  <div>{event.location}</div>
-                </div>
-                
-                <div className="mb-2">
-                  <div className="font-bold text-sm uppercase">About:</div>
-                  <p className="text-sm whitespace-pre-line">
+              </div>
+              
+              {/* Location */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>📍</span> Where
+                </h4>
+                <p className="text-gray-700">{event.location}</p>
+              </div>
+              
+              {/* Description */}
+              {event.description && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">About</h4>
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {event.description}
                   </p>
                 </div>
-
-                {/* Show guest info if available */}
-                {(event.interested_count > 0 || event.going_count > 0) && (
-                  <div className="mb-2">
-                    <div className="font-bold text-sm uppercase">Interest:</div>
-                    <div className="text-sm">
-                      {event.going_count} going, {event.interested_count} interested
+              )}
+              
+              {/* Interest stats */}
+              {(event.interested_count > 0 || event.going_count > 0) && (
+                <div className="flex gap-4">
+                  {event.going_count > 0 && (
+                    <div className="bg-green-50 rounded-lg px-4 py-3 flex-1 text-center">
+                      <p className="text-2xl font-bold text-green-600">{event.going_count}</p>
+                      <p className="text-sm text-gray-600">Going</p>
                     </div>
+                  )}
+                  {event.interested_count > 0 && (
+                    <div className="bg-blue-50 rounded-lg px-4 py-3 flex-1 text-center">
+                      <p className="text-2xl font-bold text-blue-600">{event.interested_count}</p>
+                      <p className="text-sm text-gray-600">Interested</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Additional info */}
+              <div className="space-y-3 pt-4 border-t border-gray-200">
+                {event.guest_limit && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Guest Limit</span>
+                    <span className="font-medium text-gray-900">{event.guest_limit} people</span>
+                  </div>
+                )}
+                
+                {event.rsvp_close_time && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">RSVP by</span>
+                    <span className="font-medium text-gray-900">
+                      {new Date(event.rsvp_close_time).toLocaleDateString()}
+                    </span>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
-      {/* CONTROL BUTTONS */}
-      <div className="flex justify-between items-center mt-4 px-6">
-        {/* SKIP BUTTON */}
+      {/* Simple action buttons */}
+      <div className="flex justify-center items-center py-4 space-x-8">
         {showActionButtons && onSkip && (
           <button 
             onClick={onSkip}
-            className="w-16 h-16 rounded-full bg-[#9e2755] flex items-center justify-center shadow-md hover:brightness-110"
-            aria-label="Skip"
+            className="w-14 h-14 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors shadow-md"
           >
-            <span className="text-white text-2xl font-bold">×</span>
+            <img 
+              src="/assets/Skipbutton.png"
+              alt="Skip"
+              className="w-10 h-10 object-contain"
+            />
           </button>
         )}
         
-        {/* DETAILS BUTTON */}
-        <button 
-          onClick={toggleDetails}
-          className="w-20 h-6 bg-[#A8A8A8] border-2 border-t-white border-l-white border-b-[#666] border-r-[#666] rounded-md flex items-center justify-center shadow-md active:translate-y-[1px] active:shadow-sm transition-all"
-        >
-          <span className="text-gray-700 text-sm font-medium">
-            {isShowingDetails ? 'Back' : 'Details'}
-          </span>
-        </button>
-        
-        {/* LIKE BUTTON */}
         {showActionButtons && onLike && (
           <button 
             onClick={onLike}
-            className="w-16 h-16 rounded-full bg-[#19a36f] flex items-center justify-center shadow-md hover:brightness-110"
-            aria-label="Like"
+            className="w-16 h-16 bg-green-100 hover:bg-green-200 rounded-full flex items-center justify-center transition-colors shadow-md"
           >
-            <span className="text-white text-2xl">♥</span>
+            <img 
+              src="/assets/Likebutton.png"
+              alt="Like"
+              className="w-12 h-12 object-contain"
+            />
           </button>
         )}
       </div>

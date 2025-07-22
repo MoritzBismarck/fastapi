@@ -93,10 +93,6 @@ const RequestForComment: React.FC = () => {
       <Header />
       
       <div className="p-4 max-w-4xl mx-auto space-y-8">
-        {/* Page Title */}
-        <div className="text-left">
-          <h1 className="text-2xl font-bold underline decoration-2">Request for Comment</h1>
-        </div>
 
         {/* Feature Wishlist Section */}
         <section>

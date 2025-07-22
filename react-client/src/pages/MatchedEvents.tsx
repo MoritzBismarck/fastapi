@@ -4,10 +4,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import EventsHeader from '../components/EventsHeader';
-import { Event, User } from '../types';
+import { User } from '../types';
 import { getMatchedEvents, rsvpToEvent, getEventRSVPs, cancelRSVP, unlikeEvent } from '../api/eventsApi';
 
-interface MatchedEvent extends Event {
+interface MatchedEvent {
+  id: number;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location: string;
+  cover_photo_url?: string;
+  guest_limit?: number;
+  rsvp_close_time?: string;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+  creator_id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  last_edited_at?: string;
+  interested_count: number;
+  going_count: number;
   creator?: {
     id: number;
     username: string;
@@ -241,11 +260,14 @@ const MatchedEvents: React.FC = () => {
     const people: User[] = [];
     
     if (event.creator && event.visibility === 'PRIVATE') {
+      // SIMPLIFIED: No more helper function needed
       people.push({
         id: event.creator.id,
         username: event.creator.username,
-        email: '',
-        profile_picture: event.creator.profile_picture
+        email: '', // We don't have email for creator, so use empty string
+        profile_picture: event.creator.profile_picture,
+        created_at: new Date().toISOString() // Default created_at
+        // No friendship fields needed here
       });
     }
     
@@ -329,13 +351,12 @@ const MatchedEvents: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold mb-4">Your Event Matches ({events.length})</h2>
+          <h2 className="text-xl font-bold mb-4">{events.length} Matches</h2>
           
           {events.map((event) => {
             const isExpanded = expandedEventId === event.id;
             const peopleLiked = getPeopleLiked(event);
             const peopleGoing = getPeopleGoing(event);
-            const totalAttendees = peopleLiked.length + peopleGoing.length;
             
             return (
               <div key={event.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">

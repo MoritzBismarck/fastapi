@@ -10,7 +10,7 @@ export interface MutualFriend {
 
 export type RelationshipStatus = "none" | "friends" | "request_sent" | "request_received";
 
-// For suggested users (includes relationship fields)
+// Simplified User interface - basic fields + optional friendship fields
 export interface User {
   id: number;
   username: string;
@@ -18,10 +18,12 @@ export interface User {
   first_name?: string;
   last_name?: string;
   profile_picture?: string;
-  relationship: RelationshipStatus;
-  liked: boolean;
-  friendshipId?: number | null;  // Allow null values
-  hasLikedCurrentUser: boolean;
+  created_at?: string;  // Optional - only needed for profile page
+  // Optional friendship fields - only present when needed
+  relationship?: RelationshipStatus;
+  liked?: boolean;
+  friendshipId?: number | null;
+  hasLikedCurrentUser?: boolean;
   recommended?: boolean;
   mutual_friends?: MutualFriend[];
   same_time_join?: boolean;

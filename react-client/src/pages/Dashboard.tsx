@@ -11,24 +11,24 @@ const Dashboard: React.FC = () => {
       <Header />
       
       {/* Notifications Section - wrapped in provider */}
-      <div className="mb-6">
+      {/*<div className="mb-6">
         <NotificationsProvider>
           <NotificationsList />
         </NotificationsProvider>
-      </div>
+      </div>}*/}
       
-      <div className="mb-12">
+      <div className="mb-12 flex flex-col items-center">
         <Link to="/friends" className="text-xl text-black underline font-bold">
           1. Friends
         </Link>
-        <p className="font-bold ml-8 mt-2">Find your friends</p>
+        <p className="font-bold mt-2">Find your friends</p>
       </div>
 
-      <div className="mb-12">
+      <div className="mb-12 flex flex-col items-center">
         <Link to="/events" className="text-xl text-black underline font-bold">
           2. Events
         </Link>
-        <p className="font-bold ml-8 mt-2">Match with events</p>
+        <p className="font-bold mt-2">Match with events</p>
       </div>
 
       {/* <div className="mb-12">
@@ -44,8 +44,18 @@ const Dashboard: React.FC = () => {
       </div> */}
       
       <hr className="border-gray-400 my-8" />
+
+      <div className="mb-8 flex flex-col">
+        <Link to="/rfc" className="text-l text-black underline font-bold">
+          Request for Comment
+        </Link>
+        <p className="font-bold text-l">Give Your Feedback</p>
+      </div>
+
+      <hr className="border-gray-400 my-8" />
       
-      <footer className="text-gray-600 text-sm">
+      <footer className="text-gray-600 text-sm font-bold mt-8">
+        <p>CLOSED BETA</p>
         <p>© 2025 Lalela Arts & Comms UG</p>
         <p>CONNECTION: bone-social.com</p>
       </footer>

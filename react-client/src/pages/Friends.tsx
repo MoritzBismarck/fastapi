@@ -1,8 +1,7 @@
 // react-client/src/pages/Friends.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import { User, Friendship, MutualFriend, FriendUser, RelationshipStatus } from '../types';
@@ -31,49 +30,8 @@ const Friends: React.FC = () => {
   }, []);
   
   // Auto-search when user types (with debounce)
-  useEffect(() => {
-    if (activeTab === 'search' && searchQuery.trim().length >= 2) {
-      // Clear existing timeout
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-      
-      // Set new timeout for search
-      const timeout = setTimeout(() => {
-        handleSearch();
-      }, 500); // 500ms delay
-      
-      setSearchTimeout(timeout);
-    } else if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
-    }
-    
-    // Cleanup timeout on unmount
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchQuery, activeTab]);
-  
-  const fetchFriendsData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await get<{users: User[], friends: Friendship[]}>('/users/overview');
-      setUsers(response.users);
-      setFriends(response.friends);
-    } catch (error) {
-      console.error('Error fetching friends data:', error);
-      setError('Failed to load friends data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleSearch = async () => {
-    if (searchQuery.trim().length < 2) {
+  const handleSearch = useCallback(async () => {
+    if (searchQuery.trim().length < 3) {
       setSearchResults([]);
       return;
     }
@@ -90,6 +48,47 @@ const Friends: React.FC = () => {
       setSearchResults([]);
     } finally {
       setIsSearching(false);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (activeTab === 'search' && searchQuery.trim().length >= 3) {
+      // Clear existing timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Set new timeout for search
+      const timeout = setTimeout(() => {
+        handleSearch();
+      }, 500); // 500ms delay
+      
+      setSearchTimeout(timeout);
+    } else if (searchQuery.trim().length < 3) {
+      setSearchResults([]);
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchQuery, activeTab, handleSearch]);
+  
+  const fetchFriendsData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await get<{users: User[], friends: Friendship[]}>('/users/overview');
+      setUsers(response.users);
+      setFriends(response.friends);
+    } catch (error) {
+      console.error('Error fetching friends data:', error);
+      setError('Failed to load friends data');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -192,7 +191,7 @@ const Friends: React.FC = () => {
   
   // Helper function to determine button text based on relationship
   const getButtonText = (user: User) => {
-    switch (user.relationship) {
+    switch (user.relationship || 'none') { // Default to 'none' if undefined
       case 'none': 
         return 'Like';
       case 'request_sent': 
@@ -208,7 +207,7 @@ const Friends: React.FC = () => {
   
   // Helper function to determine action based on relationship
   const getAction = (user: User): 'request' | 'accept' | 'remove' => {
-    switch (user.relationship) {
+    switch (user.relationship || 'none') { // Default to 'none' if undefined
       case 'none': 
         return 'request';
       case 'request_sent': 
@@ -354,27 +353,27 @@ const Friends: React.FC = () => {
         <div className="flex border-b border-gray-300">
           <button
             onClick={() => setActiveTab('suggested')}
-            className={`px-4 py-2 font-bold text-lg ${
+            className={`px-1 py-2 font-bold text-lg ${
               activeTab === 'suggested'
                 ? 'border-b-2 border-black text-black'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            Suggested for you
+            Suggested
           </button>
           <button
             onClick={() => setActiveTab('friends')}
-            className={`px-4 py-2 font-bold text-lg ml-6 ${
+            className={`px-1 py-2 font-bold text-lg ml-6 ${
               activeTab === 'friends'
                 ? 'border-b-2 border-black text-black'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            My friends
+            Friends
           </button>
           <button
             onClick={() => setActiveTab('search')}
-            className={`px-4 py-2 font-bold text-lg ml-6 ${
+            className={`px-1 py-2 font-bold text-lg ml-6 ${
               activeTab === 'search'
                 ? 'border-b-2 border-black text-black'
                 : 'text-gray-600 hover:text-gray-800'
@@ -392,9 +391,6 @@ const Friends: React.FC = () => {
           {/* Suggested Friends Tab */}
           {activeTab === 'suggested' && (
             <section>
-              <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
-                Suggested Friends
-              </h2>
               {renderUserList(users, "No suggested users found.")}
             </section>
           )}
@@ -402,13 +398,6 @@ const Friends: React.FC = () => {
           {/* My Friends Tab */}
           {activeTab === 'friends' && (
             <section>
-              <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
-                Friends{' '}
-                <span className="text-base font-medium text-gray-600">
-                  (You like each other)
-                </span>
-              </h2>
-              
               {friends.length > 0 ? (
                 <ul className="space-y-3">
                   {friends.map(friendship => (
@@ -472,9 +461,6 @@ const Friends: React.FC = () => {
           {/* Search Tab */}
           {activeTab === 'search' && (
             <section>
-              <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">
-                Search Users
-              </h2>
               
               {/* Search Input */}
               <div className="mb-6">
@@ -485,8 +471,8 @@ const Friends: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                 />
-                {searchQuery.trim().length > 0 && searchQuery.trim().length < 2 && (
-                  <p className="text-gray-500 text-sm mt-1">Type at least 2 characters to search</p>
+                {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 && (
+                  <p className="text-gray-500 text-sm mt-1">Type at least 3 characters to search</p>
                 )}
                 {isSearching && (
                   <p className="text-gray-500 text-sm mt-1">Searching...</p>
@@ -494,7 +480,7 @@ const Friends: React.FC = () => {
               </div>
               
               {/* Search Results */}
-              {searchQuery.trim().length >= 2 && (
+              {searchQuery.trim().length >= 3 && (
                 renderUserList(
                   searchResults, 
                   isSearching ? "Searching..." : "No users found matching your search."

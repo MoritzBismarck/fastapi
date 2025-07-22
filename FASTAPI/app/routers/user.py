@@ -6,6 +6,7 @@ from ..database import engine, get_db
 from sqlalchemy.orm import Session
 from ..services import storage_service  # Import the storage_service module
 from ..services.invitation_service import InvitationService
+from typing import List
 
 router = APIRouter(
     prefix="/users",
@@ -357,43 +358,149 @@ def create_user(
     
     return new_user
 
-@router.get('/{id}', response_model=schemas.UserOut)
-def get_user(id: int, db: Session = Depends(get_db),):
-    user = db.query(models.User).filter(models.User.id == id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id {id} not found")
-    return user
-
-@router.get("/search", response_model=list[schemas.UserOut])
+@router.get("/search", response_model=List[schemas.UserOverview])
 def search_users(
     q: str,
     db: Session = Depends(get_db),
-    current_user: int = Depends(oauth2.get_current_user),
-    limit: int = 10
+    current_user: models.User = Depends(oauth2.get_current_user),
+    limit: int = 20
 ):
-    """Search for users by username or email."""
-    if len(q) < 3:
+    """Search for users by username, first name, last name, or email"""
+    
+    if len(q.strip()) < 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Search query must be at least 3 characters long"
+            detail="Search query must be at least 2 characters long"
         )
     
-    # Search for users by username or email
-    users = db.query(models.User).filter(
+    # Get all friendships involving the current user to determine relationships
+    friendships = db.query(models.Friendship).filter(
         or_(
-            models.User.username.ilike(f"%{q}%"),
-            models.User.email.ilike(f"%{q}%")
+            models.Friendship.requester_id == current_user.id,
+            models.Friendship.addressee_id == current_user.id
+        )
+    ).all()
+    
+    # Get current user's friends
+    current_user_friends = set()
+    for friendship in friendships:
+        if friendship.status == "accepted":
+            if friendship.requester_id == current_user.id:
+                current_user_friends.add(friendship.addressee_id)
+            else:
+                current_user_friends.add(friendship.requester_id)
+    
+    # Function to get mutual friends details (reuse from overview endpoint)
+    def get_mutual_friends_details(user_id: int) -> list:
+        if not current_user_friends:
+            return []
+            
+        user_friendships = db.query(models.Friendship).filter(
+            and_(
+                or_(
+                    models.Friendship.requester_id == user_id,
+                    models.Friendship.addressee_id == user_id
+                ),
+                models.Friendship.status == "accepted"
+            )
+        ).all()
+        
+        user_friends = set()
+        for f in user_friendships:
+            if f.requester_id == user_id:
+                user_friends.add(f.addressee_id)
+            else:
+                user_friends.add(f.requester_id)
+        
+        mutual_friend_ids = current_user_friends.intersection(user_friends)
+        
+        if not mutual_friend_ids:
+            return []
+            
+        mutual_friends = db.query(models.User).filter(
+            models.User.id.in_(mutual_friend_ids)
+        ).all()
+        
+        return [{
+            "id": friend.id,
+            "username": friend.username,
+            "first_name": friend.first_name,
+            "last_name": friend.last_name,
+            "profile_picture": friend.profile_picture
+        } for friend in mutual_friends]
+    
+    # Search for users by username, first name, last name, or email
+    search_term = f"%{q.strip()}%"
+    users = db.query(models.User).filter(
+        and_(
+            models.User.id != current_user.id,  # Exclude current user
+            models.User.is_public == False,     # Exclude public users
+            or_(
+                models.User.username.ilike(search_term),
+                models.User.first_name.ilike(search_term),
+                models.User.last_name.ilike(search_term),
+                models.User.email.ilike(search_term)
+            )
         )
     ).limit(limit).all()
     
-    # Remove current user from results
-    users = [user for user in users if user.id != current_user.id]
+    # Process users to include relationship status and mutual friend details
+    processed_users = []
+    for user in users:
+        # Find relationship with current user
+        sent_friendship = next((f for f in friendships if f.requester_id == current_user.id and f.addressee_id == user.id), None)
+        received_friendship = next((f for f in friendships if f.requester_id == user.id and f.addressee_id == current_user.id), None)
+        
+        # Determine relationship status
+        if sent_friendship and sent_friendship.status == "accepted":
+            relationship = "friends"
+            friendship_id = sent_friendship.id
+        elif received_friendship and received_friendship.status == "accepted":
+            relationship = "friends"  
+            friendship_id = received_friendship.id
+        elif sent_friendship and sent_friendship.status == "pending":
+            relationship = "request_sent"
+            friendship_id = sent_friendship.id
+        elif received_friendship and received_friendship.status == "pending":
+            relationship = "request_received"
+            friendship_id = received_friendship.id
+        else:
+            relationship = "none"
+            friendship_id = None
+        
+        # Get mutual friends
+        mutual_friends = get_mutual_friends_details(user.id)
+        
+        # Check if user has liked current user
+        has_liked_current_user = received_friendship is not None
+        
+        processed_users.append({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "profile_picture": user.profile_picture,
+            "relationship": relationship,
+            "liked": sent_friendship is not None,
+            "friendshipId": friendship_id,
+            "hasLikedCurrentUser": has_liked_current_user,
+            "recommended": False,  # Search results are not recommendations
+            "mutual_friends": mutual_friends,
+            "same_time_join": False  # Not relevant for search results
+        })
     
-    return users
-
-# Add this to FASTAPI/app/routers/user.py
-
-# Add this to FASTAPI/app/routers/user.py
+    # Sort by relevance: friends first, then by mutual friends, then alphabetically
+    def sort_key(user):
+        return (
+            user["relationship"] != "friends",  # Friends first
+            -len(user["mutual_friends"]),       # More mutual friends first
+            user["username"].lower()            # Alphabetical
+        )
+    
+    processed_users.sort(key=sort_key)
+    
+    return processed_users
 
 @router.get("/{user_id}/profile", response_model=schemas.UserProfile)
 def get_user_profile(
@@ -511,3 +618,11 @@ def get_user_profile(
         "relationship": relationship,
         "friendshipId": friendship_id
     }
+
+
+@router.get('/{id}', response_model=schemas.UserOut)
+def get_user(id: int, db: Session = Depends(get_db),):
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id {id} not found")
+    return user

@@ -22,7 +22,7 @@
 }
 
 body {
-  background-color: #FA6400; /* Retro gray */
+  background-color: #f4f4f4; /* Retro gray */
   color: black;
   font-family: Arial, sans-serif;
   margin: 0;
@@ -64,7 +64,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   box-sizing: border-box;
-  background-color: #F9F2E3;   /* cream thumb */
+  background-color: #f1f1f1;   /* cream thumb */
   border: 3px solid #2C2C2C;   /* same charcoal as the track */
 }
 
@@ -76,7 +76,7 @@ body {
 html {
   scrollbar-width: auto;         /* ~16px wide */
   scrollbar-color:
-    #F9F2E3    /* thumb */
+    #f5f5f5    /* thumb */
     #2C2C2C;   /* track */
 }
 

@@ -215,8 +215,8 @@ const EventChat: React.FC = () => {
               onClick={() => navigate('/events/matches')}
               className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 font-medium"
             >
-              <span>←</span>
-              <span>Back to Matches</span>
+              <span className="text-2xl">←</span>
+              <span>Back</span>
             </button>
             
             <div className="flex items-center space-x-3">
@@ -228,9 +228,9 @@ const EventChat: React.FC = () => {
                 <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
                 <span>Refresh</span>
               </button>
-              <span className="text-sm text-gray-500">
+              {/* <span className="text-sm text-gray-500">
                 {event.match_participants?.length || 0} participants
-              </span>
+              </span> */}
             </div>
           </div>
           

@@ -24,30 +24,41 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={wrapperClass}>
-      <div className="relative flex items-center justify-between mb-2 min-h-[4rem]">
+      <div className="grid grid-cols-3 items-center px-6 py-4">
+        <div className="justify-self-start cursor-pointer">
+            <span
+              onClick={() => navigate('/dashboard')}
+              title="Home"
+            >
+              <img
+                src="/assets/home2.png"
+                alt="Home"
+                className="w-6 h-6"
+              />
+            </span>
+          </div>
         {/* Left: Brand and Beta label as plain text */}
-        <div className="flex items-center font-mono">
+        <div className="justify-self-center text-center">
           <Link
             to={variant === 'login' ? '/' : '/dashboard'}
             className="text-black hover:text-black visited:text-black focus:text-black active:text-black"
           >
-            <span className="text-3xl font-bold leading-tight mr-2">BONE</span>
-            <span className="text-base ml-2">Closed Beta</span>
+            <span className="text-2xl font-bold leading-tight mr-2">BONE</span>
           </Link>
         </div>
 
         {/* Profile button on the right, vertically centered */}
         {username && (
-          <div className="text-lg flex items-center">
+          <div className="justify-self-end">
             <span
               onClick={() => navigate('/profile')}
               className="cursor-pointer flex items-center"
               title="Profile"
             >
               <img
-                src="/assets/profile_icon.png"
+                src="/assets/user2.png"
                 alt="Profile"
-                className="w-9 h-9"
+                className="w-6 h-6"
               />
             </span>
           </div>
