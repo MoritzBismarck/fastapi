@@ -101,6 +101,8 @@ def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oau
 # Replace your get_users_overview function with this version that ensures 
 # friends-of-friends appear in suggested users:
 
+# FASTAPI/app/routers/user.py - Replace the get_users_overview function
+
 @router.get("/overview", response_model=schemas.FriendsOverview)
 def get_users_overview(
     db: Session = Depends(get_db), 
@@ -218,35 +220,27 @@ def get_users_overview(
             continue
         if received_friendship and received_friendship.status == "accepted":
             continue
-            
+        
         # Determine relationship status
-        if sent_friendship:
-            if sent_friendship.status == "pending":
-                relationship = "request_sent"
-                friendship = sent_friendship
-            else:  # rejected
-                relationship = "none"
-                friendship = None
-        elif received_friendship:
-            if received_friendship.status == "pending":
-                relationship = "request_received"
-                friendship = received_friendship
-            else:  # rejected
-                relationship = "none"
-                friendship = None
+        if sent_friendship and sent_friendship.status == "pending":
+            relationship = "request_sent"
+            friendship_id = sent_friendship.id
+        elif received_friendship and received_friendship.status == "pending":
+            relationship = "request_received"
+            friendship_id = received_friendship.id
         else:
             relationship = "none"
-            friendship = None
+            friendship_id = None
         
-        # Get mutual friends details
+        # Get mutual friends
         mutual_friends = get_mutual_friends_details(user.id)
         
-        # Check if they joined around the same time (within 24 hours)
-        same_time_join = False
-        if current_user.invitation_token_id and user.invitation_token_id:
-            if current_user.invitation_token_id == user.invitation_token_id:
-                time_diff = abs((user.created_at - current_user.created_at).total_seconds())
-                same_time_join = time_diff <= 86400  # 24 hours in seconds
+        # Check if user has liked current user
+        has_liked_current_user = received_friendship is not None
+        
+        # Check if user joined around the same time (within 1 week)
+        time_diff = abs((user.created_at - current_user.created_at).days)
+        same_time_join = time_diff <= 7
         
         processed_users.append({
             "id": user.id,
@@ -255,16 +249,16 @@ def get_users_overview(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "profile_picture": user.profile_picture,
-            "created_at": user.created_at.isoformat(),
             "relationship": relationship,
-            "friendshipId": friendship.id if friendship else None,
-            "liked": bool(sent_friendship and sent_friendship.status == "pending"),
-            "hasLikedCurrentUser": bool(received_friendship and received_friendship.status == "pending"),
+            "liked": sent_friendship is not None,
+            "friendshipId": friendship_id,
+            "hasLikedCurrentUser": has_liked_current_user,
+            "recommended": user.id in friends_of_friends,
             "mutual_friends": mutual_friends,
             "same_time_join": same_time_join
         })
     
-    # Sort users: Those with most mutual friends first
+    # Sort suggested users
     def sort_key(user):
         return (
             -len(user["mutual_friends"]),  # More mutual friends first

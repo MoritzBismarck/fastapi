@@ -94,25 +94,62 @@ class FriendshipWithDetails(BaseModel):
     class Config:
         orm_mode = True
 
+class MutualFriend(BaseModel):
+    id: int
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class UserOverview(BaseModel):
     id: int
     username: str
     email: EmailStr
-    profile_picture: Optional[str] = None  # Include profile picture
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
     relationship: str  # "none", "friends", "request_sent", "request_received"
     liked: bool
     friendshipId: Optional[int] = None
     hasLikedCurrentUser: bool
     recommended: Optional[bool] = False
+    mutual_friends: Optional[List[MutualFriend]] = None
+    same_time_join: Optional[bool] = False
+
+    class Config:
+        from_attributes = True
+
+class FriendUser(BaseModel):
+    id: int
+    username: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    mutual_friends: Optional[List[MutualFriend]] = None
+
+    class Config:
+        from_attributes = True
 
 class FriendshipOverview(BaseModel):
     id: int
-    friend: dict  # Ideally, replace with a proper User schema
+    friend: FriendUser  # Use simpler schema without relationship fields
     status: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
 
 class FriendsOverview(BaseModel):
     users: List[UserOverview]
     friends: List[FriendshipOverview]
+
+    class Config:
+        from_attributes = True
 
 
 
@@ -333,15 +370,6 @@ class EventMessage(BaseModel):
     class Config:
         from_attributes = True
 
-class MutualFriend(BaseModel):
-    id: int
-    username: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    profile_picture: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
 class UserProfile(BaseModel):
     id: int
@@ -462,3 +490,5 @@ class RequestForCommentResponse(BaseModel):
     features: List[FeatureResponse]
     user_vote_summary: UserVoteSummary
     comments: List[CommentResponse]
+
+    

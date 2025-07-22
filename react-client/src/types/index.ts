@@ -1,3 +1,16 @@
+// react-client/src/types/index.ts
+
+export interface MutualFriend {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+}
+
+export type RelationshipStatus = "none" | "friends" | "request_sent" | "request_received";
+
+// For suggested users (includes relationship fields)
 export interface User {
   id: number;
   username: string;
@@ -5,13 +18,23 @@ export interface User {
   first_name?: string;
   last_name?: string;
   profile_picture?: string;
-  created_at?: string;
-  relationship?: 'none' | 'friends' | 'request_sent' | 'request_received';
-  friendshipId?: number | null;
-  liked?: boolean;
-  hasLikedCurrentUser?: boolean;
+  relationship: RelationshipStatus;
+  liked: boolean;
+  friendshipId?: number | null;  // Allow null values
+  hasLikedCurrentUser: boolean;
+  recommended?: boolean;
   mutual_friends?: MutualFriend[];
   same_time_join?: boolean;
+}
+
+export interface FriendUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+  mutual_friends?: MutualFriend[];
 }
 
 export interface UserProfile {
@@ -23,33 +46,25 @@ export interface UserProfile {
   profile_picture?: string;
   created_at: string;
   mutual_friends?: MutualFriend[];
-  relationship?: 'none' | 'friends' | 'request_sent' | 'request_received';
+  relationship?: RelationshipStatus;
   friendshipId?: number | null;
 }
-
-export interface MutualFriend {
+  
+export interface Friendship {
   id: number;
-  username: string;
-  first_name?: string;
-  last_name?: string;
-  profile_picture?: string;
+  friend: FriendUser;  // Updated to use FriendUser instead of User
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
   
-  export interface Friendship {
-    id: number;
-    status: string;
-    created_at: string;
-    updated_at: string;
-    friend: User;
-  }
-  
-  export interface CreatorInfo {
-    id: number;
-    username: string;
-    profile_picture?: string;
-  }
-  
- export interface Event {
+export interface CreatorInfo {
+  id: number;
+  username: string;
+  profile_picture?: string;
+}
+
+export interface Event {
   id: number;
   title: string;
   description: string;
@@ -82,14 +97,14 @@ export interface MutualFriend {
   };
 }
   
-  export interface Notification {
-    id: number;
-    content: string;
-    is_read: boolean;
-    created_at: string;
-  }
+export interface Notification {
+  id: number;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
 
-  export interface LoginCredentials {
+export interface LoginCredentials {
   emailOrUsername: string;
   password: string;
 }
