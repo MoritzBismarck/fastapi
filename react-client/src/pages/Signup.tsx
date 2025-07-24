@@ -333,13 +333,13 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
 
           {/* UPDATED FORM PROGRESS INDICATOR WITH USERNAME VALIDATION */}
           <div className="mt-3 text-sm text-[#f4f4f4] text-center font-bold">
-            {!username && 'Enter your username (min 3 characters)'}
-            {username && username.length < 3 && 'Username too short (need 3+ characters)'}
-            {username && username.length >= 3 && isCheckingUsername && 'Checking if username is available...'}
+            {!username && 'Enter username'}
+            {username && username.length < 3 && 'Username too short'}
+            {username && username.length >= 3 && isCheckingUsername && 'Checking if available...'}
             {username && username.length >= 3 && !isCheckingUsername && isAvailable === false && 'Username taken - try another'}
             {username && username.length >= 3 && !isCheckingUsername && isAvailable === true && !email && 'Great username! Now enter email'}
-            {username && isAvailable === true && email && !isValidEmail(email.trim()) && 'Valid email required (e.g. user@domain.com)'}
-            {username && isAvailable === true && email && isValidEmail(email.trim()) && !password && 'Choose a password (min 8 chars)'}
+            {username && isAvailable === true && email && !isValidEmail(email.trim()) && 'Valid email required'}
+            {username && isAvailable === true && email && isValidEmail(email.trim()) && !password && 'Choose password'}
             {username && isAvailable === true && email && isValidEmail(email.trim()) && password && password.length < 8 && 'Password too short'}
             {username && isAvailable === true && email && isValidEmail(email.trim()) && password && password.length >= 8 && !confirmPassword && 'Confirm your password'}
             {username && isAvailable === true && email && isValidEmail(email.trim()) && password && confirmPassword && password !== confirmPassword && 'Passwords don\'t match'}
