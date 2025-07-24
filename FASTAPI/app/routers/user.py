@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from .. import models, schemas, utils, oauth2
 from fastapi import Body, FastAPI, Response, status, HTTPException, Depends, APIRouter, UploadFile, File
 from ..database import engine, get_db
@@ -33,6 +33,10 @@ def update_user_profile(
     """Update the current user's profile information"""
     
     user_query = db.query(models.User).filter(models.User.id == current_user.id)
+    
+    # ✅ NEW: Convert username to lowercase if updating username
+    if user_update.username:
+        user_update.username = user_update.username.lower()
     
     # If updating username, check if it's already taken
     if user_update.username and user_update.username != current_user.username:
@@ -302,16 +306,15 @@ def get_users_overview(
         "friends": established_friendships
     }
 
-# Update in FASTAPI/app/routers/user.py
 
-# FASTAPI/app/routers/user.py - Modified create_user endpoint
-
-@router.post("/{token}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserCreationResponse)
-def create_user(
-    token: str,
-    user: schemas.UserCreate, 
-    db: Session = Depends(get_db)
-):
+@router.post("/{token}", response_model=dict)
+def create_user(token: str, user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Create a new user"""
+    
+    # ✅ NEW: Convert username to lowercase before any processing
+    if user.username:
+        user.username = user.username.lower()
+    
     # Check if this is the first user in the system
     user_count = db.query(models.User).count()
     is_first_user = user_count == 0
@@ -439,6 +442,8 @@ def search_users(
             "profile_picture": friend.profile_picture
         } for friend in mutual_friends]
     
+    q_lower = q.lower()
+
     # Search for users by username, first name, last name, or email
     search_term = f"%{q.strip()}%"
     users = db.query(models.User).filter(
@@ -446,10 +451,10 @@ def search_users(
             models.User.id != current_user.id,  # Exclude current user
             models.User.is_public == False,     # Exclude public users
             or_(
-                models.User.username.ilike(search_term),
-                models.User.first_name.ilike(search_term),
-                models.User.last_name.ilike(search_term),
-                models.User.email.ilike(search_term)
+                func.lower(models.User.username).contains(q_lower),    # ✅ CHANGED: Case-insensitive username search
+                models.User.first_name.ilike(search_term),             # Keep existing
+                models.User.last_name.ilike(search_term),              # Keep existing
+                models.User.email.ilike(search_term)                   # Keep existing
             )
         )
     ).limit(limit).all()
@@ -644,6 +649,9 @@ async def check_username_availability(username: str, db: Session = Depends(get_d
     Check if a username is already taken
     Returns: {"available": true/false}
     """
+    # ✅ NEW: Convert to lowercase for checking
+    username = username.lower()
+    
     # Query the database to see if username exists
     existing_user = db.query(models.User).filter(models.User.username == username).first()
     

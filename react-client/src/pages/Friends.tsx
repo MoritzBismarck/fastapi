@@ -195,7 +195,7 @@ const Friends: React.FC = () => {
       case 'none': 
         return 'Like';
       case 'request_sent': 
-        return 'Mog i ni mehr';
+        return 'Mog ni mehr';
       case 'request_received': 
         return 'Like';
       case 'friends': 
@@ -453,7 +453,7 @@ const Friends: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-600">No friends yet. Start by liking some suggested users!</p>
+                <p className="text-gray-600">Like each other to become friends!</p>
               )}
             </section>
           )}

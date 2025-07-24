@@ -58,6 +58,14 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleUsernameOrEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // If it looks like a username (no @ symbol), convert to lowercase
+    // If it's an email, keep it as is
+    const processedValue = value.includes('@') ? value : value.toLowerCase();
+    setUsernameOrEmail(processedValue);
+  };
+
   // Combine errors - prefer auth error over redirect error
   const error = authError || displayError;
 
@@ -109,7 +117,10 @@ const Login: React.FC = () => {
               type="text"
               placeholder="Username or Email"
               value={usernameOrEmail}
-              onChange={e => setUsernameOrEmail(e.target.value)}
+              onChange={handleUsernameOrEmailChange}
+              style={{ 
+                textTransform: usernameOrEmail.includes('@') ? 'none' : 'lowercase' 
+              }}
               className="
                 w-full
                 bg-[#f4f4f4]

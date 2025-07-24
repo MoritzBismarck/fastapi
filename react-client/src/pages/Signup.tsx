@@ -61,7 +61,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
 
   // ADD THIS: Handle username changes
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = e.target.value;
+    const newUsername = e.target.value.toLowerCase();
     setUsername(newUsername);
     checkUsername(newUsername);
   };
@@ -221,6 +221,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               placeholder="username (min 3 chars)"
               value={username}
               onChange={handleUsernameChange}
+              style={{ textTransform: 'lowercase' }}
               className={`
                 w-full
                 bg-[#f4f4f4]

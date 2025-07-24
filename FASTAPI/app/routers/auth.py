@@ -12,9 +12,15 @@ router = APIRouter(
 
 @router.post("/login", response_model=schemas.Token)
 def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    # Convert username to lowercase if it's not an email
+    username_or_email = user_credentials.username
+    if '@' not in username_or_email:
+        # It's a username, convert to lowercase
+        username_or_email = username_or_email.lower()
+    # Check if user exists by username or email
     user = db.query(models.User).filter(or_(
-            models.User.email == user_credentials.username,
-            models.User.username == user_credentials.username
+            models.User.email == username_or_email,
+            models.User.username == username_or_email
         )).first()
     if not user:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
