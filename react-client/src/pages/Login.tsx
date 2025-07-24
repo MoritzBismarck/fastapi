@@ -16,6 +16,9 @@ const Login: React.FC = () => {
   const { login, isLoading: isAuthLoading, error: authError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  // ————— derived state —————
+  const isFormComplete = usernameOrEmail.trim().length > 0 && password.length > 0;
+  const canSubmit = isFormComplete && !isAuthLoading;
   
   // ————— error handling from redirects —————
   const [displayError, setDisplayError] = useState<string | null>(null);
@@ -138,20 +141,20 @@ const Login: React.FC = () => {
               required
             />
 
-            <Button
-              type="submit"
-              disabled={isAuthLoading}
-              fullWidth
-              className="
-                font-bold
-                bg-[#A59B91]
-                border-t-white border-l-white
-                border-b-[#9D9086] border-r-[#9D9086]
-                text-[#f5ead3]
-              "
-            >
-              {isAuthLoading ? 'Processing…' : 'Login'}
-            </Button>
+          <Button
+            type="submit"
+            disabled={!canSubmit}           // Disabled when form incomplete or loading
+            theme="white"                   // White theme works better on dark background
+            fullWidth
+            size="lg"
+          >
+            {isAuthLoading 
+              ? 'Processing…' 
+              : isFormComplete 
+                ? 'Login'               // Exciting text when ready
+                : 'Enter credentials'       // Instructional text when not ready
+            }
+          </Button>
           </form>
         </div>
       </div>

@@ -26,6 +26,25 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const [tokenValid, setTokenValid] = useState(false);
   const [tokenDescription, setTokenDescription] = useState('');
 
+  // ————— Form validation for button states —————
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isFormComplete = 
+    username.trim().length > 0 && 
+    email.trim().length > 0 && 
+    isValidEmail(email.trim()) &&
+    password.length >= 8 && 
+    confirmPassword.length > 0 &&
+    password === confirmPassword;
+
+  const hasValidationErrors = 
+    (email.length > 0 && !isValidEmail(email.trim())) ||
+    (password.length > 0 && password.length < 8) ||
+    (confirmPassword.length > 0 && password !== confirmPassword);
+
   useEffect(() => {
     const validateToken = async () => {
       try {
@@ -80,14 +99,16 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    // Don't submit if form has validation errors
+    if (hasValidationErrors || !isFormComplete) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+      } else if (password.length < 8) {
+        setError('Password must be at least 8 characters long');
+      }
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
+
     setLoading(true);
     setError('');
     
@@ -153,11 +174,11 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
         </h1>
         
         {/* Show invitation description if available */}
-        {/* {tokenDescription && (
+        {tokenDescription && (
           <p className="text-center text-gray-600 mb-4">
             Invitation: {tokenDescription}
           </p>
-        )} */}
+        )}
         
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
           {isFirstUserPage && (
@@ -165,7 +186,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
           )}
 
           {error && (
-            <div className="text-red-700 bg-red-100 p-2 text-sm mb-3">
+            <div className="text-red-700 bg-red-100 p-2 text-sm mb-3 rounded">
               {error}
             </div>
           )}
@@ -184,6 +205,9 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 px-3 py-2
                 font-mono
                 focus:outline-none
+                border-2 border-gray-400
+                focus:border-blue-500
+                transition-colors
               "
               required
             />
@@ -192,7 +216,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               placeholder="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="
+              className={`
                 w-full
                 bg-[#f4f4f4]
                 text-[#222]
@@ -200,15 +224,21 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 px-3 py-2
                 font-mono
                 focus:outline-none
-              "
+                border-2
+                transition-colors
+                ${email.length > 0 && !isValidEmail(email.trim())
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-gray-400 focus:border-blue-500'
+                }
+              `}
               required
             />
             <input
               type="password"
-              placeholder="password"
+              placeholder="password (min 8 chars)"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="
+              className={`
                 w-full
                 bg-[#f4f4f4]
                 text-[#222]
@@ -216,7 +246,13 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 px-3 py-2
                 font-mono
                 focus:outline-none
-              "
+                border-2
+                transition-colors
+                ${password.length > 0 && password.length < 8 
+                  ? 'border-red-400 focus:border-red-500' 
+                  : 'border-gray-400 focus:border-blue-500'
+                }
+              `}
               required
             />
             <input
@@ -224,7 +260,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               placeholder="confirm password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="
+              className={`
                 w-full
                 bg-[#f4f4f4]
                 text-[#222]
@@ -232,25 +268,53 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 px-3 py-2
                 font-mono
                 focus:outline-none
-              "
+                border-2
+                transition-colors
+                ${confirmPassword.length > 0 && password !== confirmPassword 
+                  ? 'border-red-400 focus:border-red-500' 
+                  : 'border-gray-400 focus:border-blue-500'
+                }
+              `}
               required
             />
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={!isFormComplete || loading}    // Disabled until form is complete OR during loading
+              inactive={false}                          // Remove inactive state - use disabled instead
+              theme="white"                             // White theme for dark background
               fullWidth
-              className="
-                font-bold
-                bg-[#A59B91]
-                border-t-white border-l-white
-                border-b-[#9D9086] border-r-[#9D9086]
-                text-[#f5ead3]
-              "
+              size="md"
             >
-              {loading ? 'Creating Account...' : 'Enter'}
+              {loading 
+                ? 'Creating Account...' 
+                : hasValidationErrors 
+                  ? 'Fix errors above'
+                  : isFormComplete 
+                    ? 'Create Account'
+                    : 'Complete all fields'
+              }
             </Button>
           </form>
+
+          {/* Form progress indicator */}
+          <div className="mt-3 text-xs text-gray-400 text-center">
+            {!username && 'Enter your username'}
+            {username && !email && 'Email address required'}
+            {username && email && !isValidEmail(email.trim()) && 'Valid email required (e.g. user@domain.com)'}
+            {username && email && isValidEmail(email.trim()) && !password && 'Choose a password (min 8 chars)'}
+            {username && email && isValidEmail(email.trim()) && password && password.length < 8 && 'Password too short'}
+            {username && email && isValidEmail(email.trim()) && password && password.length >= 8 && !confirmPassword && 'Confirm your password'}
+            {username && email && isValidEmail(email.trim()) && password && confirmPassword && password !== confirmPassword && 'Passwords don\'t match'}
+            {isFormComplete && !loading && 'Ready to create account!'}
+            {loading && 'Creating your account...'}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 text-center text-[#f4f4f4] text-sm space-y-1">
+          <p>Welcome to BONE</p>
+          <p>Social media with purpose</p>
         </div>
       </div>
     </div>
