@@ -95,7 +95,7 @@ const Login: React.FC = () => {
 
         {/* card */}
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
-          <p className="text-[#f4f4f4] mb-4 font-bold">Use Time Wisely!</p>
+          <p className="text-[#f4f4f4] mb-4 font-bold">komm rin...</p>
 
           {/* Show error at the top of the form */}
           {error && (
