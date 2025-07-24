@@ -21,6 +21,7 @@ import MatchedEvents from './pages/MatchedEvents';
 import EventChat from './pages/EventChat';
 import UserProfilePage from './pages/UserProfile';
 import RequestForComment from './pages/RequestForComment';
+import EditEvent from './pages/EditEvent';
 
 const App: React.FC = () => {
   return (
@@ -125,6 +126,14 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <RequestForComment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/events/:id/edit" 
+                element={
+                  <ProtectedRoute>
+                    <EditEvent />
                   </ProtectedRoute>
                 }
               />

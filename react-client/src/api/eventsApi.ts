@@ -1,7 +1,7 @@
 // react-client/src/api/eventsApi.ts - Updated to use types from main types file
 
-import { get as getRequest, post, del, get } from './client';
-import { Event, ChatMessage, EventChatInfo, SendMessageResponse, CreateMessageRequest } from '../types';
+import { get as getRequest, post, del, get, put } from './client';
+import { Event, ChatMessage, EventChatInfo, SendMessageResponse, CreateMessageRequest, EventUpdate } from '../types';
 
 // Get events that the user hasn't liked yet
 export const getEvents = async (
@@ -101,4 +101,13 @@ export const getUserOwnEvents = async (
 
 export const deleteEvent = async (eventId: number): Promise<void> => {
   return del(`/events/${eventId}`);
+};
+
+export const getEventById = async (eventId: number): Promise<Event> => {
+  return getRequest<Event>(`/events/${eventId}`);
+};
+
+// Update an event
+export const updateEvent = async (eventId: number, eventData: EventUpdate): Promise<Event> => {
+  return put(`/events/${eventId}`, eventData);
 };

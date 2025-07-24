@@ -1251,4 +1251,75 @@ def send_event_message(
         "message": "Message sent successfully"
     }
 
+@router.put("/{id}", response_model=schemas.EventResponse)
+def update_event(
+    id: int,
+    event: schemas.EventCreate,  # Reuse the same schema as create
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
+    """Update an event - only the creator can edit their event"""
+    
+    # Get the event
+    event_query = db.query(models.Event).filter(models.Event.id == id)
+    existing_event = event_query.first()
+    
+    if not existing_event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {id} not found"
+        )
+    
+    # Check if current user is the creator
+    if existing_event.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only edit your own events"
+        )
+    
+    try:
+        # Prepare update data
+        event_data = event.model_dump(exclude_unset=True)  # Only include fields that were set
+        
+        # Remove creator_id if it exists (we don't want to change the creator)
+        event_data.pop('creator_id', None)
+        
+        # Track changed fields for audit purposes
+        changed_fields = []
+        for field, new_value in event_data.items():
+            old_value = getattr(existing_event, field)
+            if old_value != new_value:
+                changed_fields.append(field)
+        
+        # Update the event
+        event_query.update(event_data, synchronize_session=False)
+        
+        # Update the last_edited_at timestamp
+        event_query.update({"last_edited_at": datetime.utcnow()}, synchronize_session=False)
+        
+        # Create an edit record for audit trail
+        if changed_fields:
+            edit_record = models.EventEdit(
+                event_id=id,
+                editor_id=current_user.id,
+                changed_fields=",".join(changed_fields)
+            )
+            db.add(edit_record)
+        
+        db.commit()
+        
+        # Notify participants about the edit (optional - you can implement this later)
+        # NotificationService.notify_event_edited(db, id, current_user.id, changed_fields)
+        
+        # Return the updated event
+        updated_event = event_query.first()
+        return updated_event
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating event: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the event"
+        )
 

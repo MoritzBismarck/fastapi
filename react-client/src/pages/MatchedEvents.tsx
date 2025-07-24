@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import EventsHeader from '../components/EventsHeader';
 import { User } from '../types';
-import { getMatchedEvents, rsvpToEvent, getEventRSVPs, cancelRSVP, unlikeEvent } from '../api/eventsApi';
+import { getMatchedEvents, getUserOwnEvents, rsvpToEvent, getEventRSVPs, cancelRSVP, unlikeEvent, deleteEvent } from '../api/eventsApi';
 
 interface MatchedEvent {
   id: number;
@@ -39,6 +39,8 @@ interface MatchedEvent {
     status: 'GOING' | 'CANCELLED';
     responded_at: string;
   };
+  // Flag to identify if this is the user's own event
+  is_own_event?: boolean;
 }
 
 interface AttendeeWithStatus extends User {
@@ -52,20 +54,45 @@ const MatchedEvents: React.FC = () => {
   const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
   const [showAttendeesModal, setShowAttendeesModal] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [showOwnEvents, setShowOwnEvents] = useState(false);
   
   const navigate = useNavigate();
   
-  // Fetch matched events
-  const fetchMatchedEvents = async () => {
+  // Fetch both matched events and user's own events
+  const fetchAllEvents = async () => {
     setIsLoading(true);
     setErrorMessage('');
     
     try {
-      const data = await getMatchedEvents();
+      // Always fetch matched events
+      const matchedData = await getMatchedEvents();
+      
+      // Mark matched events
+      const matchedEventsWithFlag = matchedData.map(event => ({
+        ...event,
+        is_own_event: false
+      }));
+      
+      let combinedEvents = [...matchedEventsWithFlag];
+      
+      // If checkbox is checked, also fetch user's own events
+      if (showOwnEvents) {
+        const ownData = await getUserOwnEvents();
+        
+        // Mark own events and filter out any that might already be in matches
+        const ownEventsWithFlag = ownData
+          .filter(event => !matchedEventsWithFlag.find(matched => matched.id === event.id))
+          .map(event => ({
+            ...event,
+            is_own_event: true
+          }));
+        
+        combinedEvents = [...matchedEventsWithFlag, ...ownEventsWithFlag];
+      }
       
       // For each event, fetch additional RSVP data for the UI
       const eventsWithRSVPs = await Promise.all(
-        data.map(async (event) => {
+        combinedEvents.map(async (event) => {
           try {
             const rsvps = await getEventRSVPs(event.id);
             const going_users = rsvps.filter(rsvp => rsvp.rsvp_status === 'GOING');
@@ -85,12 +112,55 @@ const MatchedEvents: React.FC = () => {
         })
       );
       
+      // Sort events by start_date (newest first)
+      eventsWithRSVPs.sort((a, b) => 
+        new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+      );
+      
       setEvents(eventsWithRSVPs);
     } catch (error) {
-      console.error('Error fetching matched events:', error);
-      setErrorMessage('An error occurred while loading matched events');
+      console.error('Error fetching events:', error);
+      setErrorMessage('An error occurred while loading events');
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Handle checkbox toggle
+  const handleShowOwnEventsToggle = (checked: boolean) => {
+    setShowOwnEvents(checked);
+  };
+  
+  // Re-fetch events when showOwnEvents changes
+  useEffect(() => {
+    fetchAllEvents();
+  }, [showOwnEvents]);
+  
+  // Initial fetch
+  useEffect(() => {
+    fetchAllEvents();
+  }, []);
+  
+  // Handle deleting own event
+  const handleDeleteEvent = async (eventId: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    if (!window.confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
+    
+    setActionLoading(eventId);
+    
+    try {
+      await deleteEvent(eventId);
+      // Remove the event from the list
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      setErrorMessage('');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      setErrorMessage('Error deleting event. Please try again.');
+    } finally {
+      setActionLoading(null);
     }
   };
   
@@ -133,7 +203,7 @@ const MatchedEvents: React.FC = () => {
     
     try {
       await rsvpToEvent(eventId, status);
-      await fetchMatchedEvents();
+      await fetchAllEvents();
       setErrorMessage('');
     } catch (error) {
       console.error('Error submitting RSVP:', error);
@@ -150,7 +220,7 @@ const MatchedEvents: React.FC = () => {
     
     try {
       await cancelRSVP(eventId);
-      await fetchMatchedEvents();
+      await fetchAllEvents();
       setErrorMessage('');
     } catch (error) {
       console.error('Error canceling RSVP:', error);
@@ -165,6 +235,7 @@ const MatchedEvents: React.FC = () => {
     event.stopPropagation();
     navigate(`/events/${eventId}/chat`);
   };
+  
   const handleUnlike = async (eventId: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
@@ -183,7 +254,10 @@ const MatchedEvents: React.FC = () => {
   };
   
   // Get the current status for an event
-  const getEventStatus = (event: MatchedEvent): 'LIKED' | 'GOING' => {
+  const getEventStatus = (event: MatchedEvent): 'LIKED' | 'GOING' | 'OWN' => {
+    if (event.is_own_event) {
+      return 'OWN';
+    }
     if (event.current_user_rsvp && event.current_user_rsvp.status === 'GOING') {
       return 'GOING';
     }
@@ -206,6 +280,27 @@ const MatchedEvents: React.FC = () => {
     }
     
     switch (status) {
+      case 'OWN':
+        return (
+          <div className="flex space-x-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/events/${event.id}/edit`);
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Edit Event
+            </button>
+            <button
+              onClick={(e) => handleDeleteEvent(event.id, e)}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Delete Event
+            </button>
+          </div>
+        );
+        
       case 'LIKED':
         return (
           <div className="flex space-x-2">
@@ -246,6 +341,8 @@ const MatchedEvents: React.FC = () => {
     const status = getEventStatus(event);
     
     switch (status) {
+      case 'OWN':
+        return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Your Event</span>;
       case 'LIKED':
         return <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Liked</span>;
       case 'GOING':
@@ -260,14 +357,12 @@ const MatchedEvents: React.FC = () => {
     const people: User[] = [];
     
     if (event.creator && event.visibility === 'PRIVATE') {
-      // SIMPLIFIED: No more helper function needed
       people.push({
         id: event.creator.id,
         username: event.creator.username,
         email: '', // We don't have email for creator, so use empty string
         profile_picture: event.creator.profile_picture,
-        created_at: new Date().toISOString() // Default created_at
-        // No friendship fields needed here
+        created_at: new Date().toISOString() // Default timestamp
       });
     }
     
@@ -278,57 +373,45 @@ const MatchedEvents: React.FC = () => {
     return people;
   };
   
-  // Get people who are going
+  // Get all people who are going to the event
   const getPeopleGoing = (event: MatchedEvent): User[] => {
     return event.going_users || [];
   };
-
-  // Get combined attendees with status - SORTED LIST
+  
+  // Get combined attendees with status
   const getCombinedAttendees = (event: MatchedEvent): AttendeeWithStatus[] => {
-    const peopleLiked = getPeopleLiked(event);
-    const peopleGoing = getPeopleGoing(event);
+    const liked = getPeopleLiked(event).map(user => ({ ...user, status: 'LIKED' as const }));
+    const going = getPeopleGoing(event).map(user => ({ ...user, status: 'GOING' as const }));
     
-    // Create a map to track users and avoid duplicates
-    const attendeesMap = new Map<number, AttendeeWithStatus>();
+    // Remove duplicates (people who both liked and are going)
+    const combined: AttendeeWithStatus[] = [];
+    const seenIds = new Set<number>();
     
-    // Add people who liked (but prioritize going status if they exist in both)
-    peopleLiked.forEach(person => {
-      attendeesMap.set(person.id, {
-        ...person,
-        status: 'LIKED'
-      });
-    });
-    
-    // Override with going status for people who are going
-    peopleGoing.forEach(person => {
-      attendeesMap.set(person.id, {
-        ...person,
-        status: 'GOING'
-      });
-    });
-    
-    // Convert to array and sort: GOING first, then LIKED, then by username
-    return Array.from(attendeesMap.values()).sort((a, b) => {
-      // First sort by status priority (GOING before LIKED)
-      if (a.status !== b.status) {
-        return a.status === 'GOING' ? -1 : 1;
+    // Add going users first (higher priority)
+    going.forEach(user => {
+      if (!seenIds.has(user.id)) {
+        combined.push(user);
+        seenIds.add(user.id);
       }
-      
-      // Then sort alphabetically by username within same status
-      return a.username.localeCompare(b.username);
     });
+    
+    // Then add liked users
+    liked.forEach(user => {
+      if (!seenIds.has(user.id)) {
+        combined.push(user);
+        seenIds.add(user.id);
+      }
+    });
+    
+    return combined;
   };
   
-  useEffect(() => {
-    fetchMatchedEvents();
-  }, []);
-
   if (isLoading) {
     return (
       <div className="font-mono max-w-4xl mx-auto p-4">
         <Header />
         <EventsHeader />
-        <div className="text-center p-8">Loading matches...</div>
+        <div className="text-center p-8">Loading events...</div>
       </div>
     );
   }
@@ -344,14 +427,35 @@ const MatchedEvents: React.FC = () => {
         </div>
       )}
       
+      {/* Controls Section */}
+        <div className="flex items-center space-x-3">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showOwnEvents}
+              onChange={(e) => handleShowOwnEventsToggle(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-black-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-bold text-gray-700">
+              My Events
+            </span>
+          </label>
+        </div>
+      
       {events.length === 0 ? (
         <div className="text-center p-8">
-          <p className="text-lg text-gray-600">No matches yet!</p>
-          <p className="text-sm text-gray-500">Start swiping on events to find matches.</p>
+          <p className="text-lg text-gray-600">
+            {showOwnEvents ? 'No events found!' : 'No matches yet!'}
+          </p>
+          <p className="text-sm text-gray-500">
+            {showOwnEvents 
+              ? 'Create some events or start swiping to see matches here.'
+              : 'Start swiping on events to find matches.'
+            }
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold mb-4">{events.length} Match/es</h2>
           
           {events.map((event) => {
             const isExpanded = expandedEventId === event.id;
@@ -404,23 +508,17 @@ const MatchedEvents: React.FC = () => {
                                   <img 
                                     src={attendee.profile_picture} 
                                     alt={attendee.username}
-                                    className="w-6 h-6 rounded-full object-cover"
+                                    className="w-full h-full rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="text-xs font-medium">
+                                  <span className="text-xs font-bold text-gray-600">
                                     {attendee.username.charAt(0).toUpperCase()}
                                   </span>
                                 )}
                               </div>
                             ))}
-                            {getCombinedAttendees(event).length > 5 && (
-                              <div className="w-6 h-6 bg-gray-400 rounded-full border-2 border-white flex items-center justify-center text-xs text-white font-medium">
-                                +{getCombinedAttendees(event).length - 5}
-                              </div>
-                            )}
                           </div>
                           
-                          {/* Text showing real attendees count */}
                           <span>
                             {peopleGoing.length > 0 ? (
                               <span className="text-green-600 font-medium">{peopleGoing.length} going</span>
@@ -451,18 +549,18 @@ const MatchedEvents: React.FC = () => {
                     
                     {/* Action Buttons */}
                     <div className="mb-4 space-y-2">
-                    {renderActionButtons(event)}
-                    
-                    {/* TEMPORARILY DISABLED - Chat Button */}
-                    
-                    <button
-                        onClick={(e) => handleOpenChat(event.id, e)}
-                        className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center justify-center space-x-2"
-                    >
-                        <span>💬</span>
-                        <span>Chat with Event Group</span>
-                    </button>
-                   
+                      {renderActionButtons(event)}
+                      
+                      {/* Chat Button - only show for non-own events or own events with participants */}
+                      {(!event.is_own_event || (event.is_own_event && getCombinedAttendees(event).length > 0)) && (
+                        <button
+                          onClick={(e) => handleOpenChat(event.id, e)}
+                          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center justify-center space-x-2"
+                        >
+                          <span>💬</span>
+                          <span>Chat with Event Group</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -493,74 +591,65 @@ const MatchedEvents: React.FC = () => {
                 const peopleGoing = event ? getPeopleGoing(event) : [];
                 
                 return (
-                  <div>
-                    {/* Going Section */}
+                  <>
+                    {/* People Going Section */}
                     {peopleGoing.length > 0 && (
                       <div>
-                        <h4 className="font-medium text-green-700 mb-2 flex items-center">
-                          <span className="text-green-600 mr-1">✅</span>
-                          Going ({peopleGoing.length})
-                        </h4>
-                        <div className="space-y-2 mb-4">
-                          {peopleGoing.map((person) => (
-                            <div key={person.id} className="flex items-center space-x-3 p-2 rounded hover:bg-green-50">
+                        <h4 className="font-semibold text-green-600 mb-2">Going ({peopleGoing.length})</h4>
+                        <div className="space-y-2">
+                          {peopleGoing.map(user => (
+                            <div key={user.id} className="flex items-center space-x-3">
                               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                                {person.profile_picture ? (
+                                {user.profile_picture ? (
                                   <img 
-                                    src={person.profile_picture} 
-                                    alt={person.username}
-                                    className="w-8 h-8 rounded-full object-cover"
+                                    src={user.profile_picture} 
+                                    alt={user.username}
+                                    className="w-full h-full rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="text-sm font-medium">
-                                    {person.username.charAt(0).toUpperCase()}
+                                  <span className="text-sm font-bold text-gray-600">
+                                    {user.username.charAt(0).toUpperCase()}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-sm">{person.username}</span>
+                              <span className="text-sm">{user.username}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
                     
-                    {/* Liked Section */}
+                    {/* People Liked Section */}
                     {peopleLiked.length > 0 && (
                       <div>
-                        <h4 className="font-medium text-purple-700 mb-2 flex items-center">
-                          <span className="text-purple-600 mr-1">❤️</span>
-                          Interested ({peopleLiked.length})
-                        </h4>
+                        <h4 className="font-semibold text-purple-600 mb-2">Interested ({peopleLiked.length})</h4>
                         <div className="space-y-2">
-                          {peopleLiked
-                            .filter(person => !peopleGoing.some(going => going.id === person.id)) // Exclude people who are already going
-                            .map((person) => (
-                            <div key={person.id} className="flex items-center space-x-3 p-2 rounded hover:bg-purple-50">
+                          {peopleLiked.map(user => (
+                            <div key={user.id} className="flex items-center space-x-3">
                               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                                {person.profile_picture ? (
+                                {user.profile_picture ? (
                                   <img 
-                                    src={person.profile_picture} 
-                                    alt={person.username}
-                                    className="w-8 h-8 rounded-full object-cover"
+                                    src={user.profile_picture} 
+                                    alt={user.username}
+                                    className="w-full h-full rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="text-sm font-medium">
-                                    {person.username.charAt(0).toUpperCase()}
+                                  <span className="text-sm font-bold text-gray-600">
+                                    {user.username.charAt(0).toUpperCase()}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-sm">{person.username}</span>
+                              <span className="text-sm">{user.username}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
                     
-                    {/* Empty state */}
-                    {peopleGoing.length === 0 && peopleLiked.length === 0 && (
-                      <p className="text-sm text-gray-500">No one has shown interest yet.</p>
+                    {peopleLiked.length === 0 && peopleGoing.length === 0 && (
+                      <p className="text-gray-500 text-center">No one has shown interest yet</p>
                     )}
-                  </div>
+                  </>
                 );
               })()}
             </div>

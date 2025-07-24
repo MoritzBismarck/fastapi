@@ -245,3 +245,17 @@ export interface CreateCommentRequest {
 export interface CreateReplyRequest {
   content: string;
 }
+
+export interface EventUpdate {
+  title?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  cover_photo_url?: string;
+  guest_limit?: number;
+  rsvp_close_time?: string;
+  visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+}
