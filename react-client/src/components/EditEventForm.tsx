@@ -213,7 +213,7 @@ const EditEventForm: React.FC<EditEventFormProps> = ({ event, onEventUpdated, on
         </div>
 
         {/* Visibility */}
-        <div>
+        {/* <div>
           <label htmlFor="visibility" className="block mb-1 font-bold">Visibility:</label>
           <select
             id="visibility"
@@ -224,7 +224,7 @@ const EditEventForm: React.FC<EditEventFormProps> = ({ event, onEventUpdated, on
             <option value="FRIENDS">Friends Only</option>
             <option value="PRIVATE">Private (Invitation Only)</option>
           </select>
-        </div>
+        </div> */}
 
         {/* Date & Time */}
         <div>

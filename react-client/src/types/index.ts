@@ -259,3 +259,14 @@ export interface EventUpdate {
   rsvp_close_time?: string;
   visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
 }
+
+export interface AuthContextType {
+  user: User | null;
+  username: string;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => Promise<void>;
+  setAuthenticatedUser: (token: string, userData: User) => void; // ✅ NEW: Add this function
+}

@@ -21,6 +21,7 @@ interface AuthContextType {
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  setAuthenticatedUser: (token: string, userData: User) => void; // ✅ NEW: Add this function
 }
 
 // Create context with default values
@@ -32,6 +33,7 @@ export const AuthContext = createContext<AuthContextType>({
   error: null,
   login: async () => {},
   logout: async () => {},
+  setAuthenticatedUser: () => {}, // ✅ NEW: Add default
 });
 
 interface AuthProviderProps {
@@ -67,6 +69,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     loadUser();
+  }, []);
+
+  // ✅ NEW: Helper function to set authenticated user after signup
+  const setAuthenticatedUser = useCallback((token: string, userData: User) => {
+    // Store token and username
+    storeToken(token);
+    storeUsername(userData.username || userData.email);
+    
+    // Set state
+    setUser(userData);
+    setIsAuthenticated(true);
+    setError(null);
+    setIsLoading(false);
   }, []);
 
   // Login function
@@ -135,6 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     login,
     logout,
+    setAuthenticatedUser, // ✅ NEW: Include in context
   };
 
   return (

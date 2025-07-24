@@ -491,4 +491,11 @@ class RequestForCommentResponse(BaseModel):
     user_vote_summary: UserVoteSummary
     comments: List[CommentResponse]
 
+class UserCreationResponse(BaseModel):
+    """Response schema for user creation that includes both user data and auth token"""
+    user: UserOut
+    access_token: str
+    token_type: str = "bearer"
     
+    class Config:
+        from_attributes = True

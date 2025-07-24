@@ -304,7 +304,9 @@ def get_users_overview(
 
 # Update in FASTAPI/app/routers/user.py
 
-@router.post("/{token}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+# FASTAPI/app/routers/user.py - Modified create_user endpoint
+
+@router.post("/{token}", status_code=status.HTTP_201_CREATED, response_model=schemas.UserCreationResponse)
 def create_user(
     token: str,
     user: schemas.UserCreate, 
@@ -356,7 +358,15 @@ def create_user(
     db.commit()
     db.refresh(new_user)
     
-    return new_user
+    # ✅ NEW: Generate access token for auto-login
+    access_token = oauth2.create_access_token(data={"user_id": new_user.id})
+    
+    # Return both user data and access token
+    return {
+        "user": new_user,
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 @router.get("/search", response_model=List[schemas.UserOverview])
 def search_users(

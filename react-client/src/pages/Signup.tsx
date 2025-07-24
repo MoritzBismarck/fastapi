@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { post } from '../api/client';
+import { useAuth } from '../hooks/useAuth'; // ✅ ADD: Import useAuth
 import Button from '../components/Button';
 import Header from '../components/Header';
 
@@ -9,6 +10,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { setAuthenticatedUser } = useAuth(); // ✅ ADD: Get the helper function
 
   const isFirstUserPage = location.pathname === '/signup/first-user';
 
@@ -64,22 +66,35 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
     }
     setLoading(true);
     setError('');
+    
     try {
       const effectiveToken = isFirstUserPage ? 'first-user' : token;
-      await post(`/users/${effectiveToken}`, {
+      
+      // ✅ MODIFIED: Expect response to include both user and token
+      const response = await post<{
+        user: any;
+        access_token: string;
+        token_type: string;
+      }>(`/users/${effectiveToken}`, {
         username,
         email,
         password,
         first_name: firstName,
         last_name: lastName
       });
-      navigate('/', { 
+      
+      // ✅ NEW: Automatically log in the user using the helper function
+      setAuthenticatedUser(response.access_token, response.user);
+      
+      // ✅ MODIFIED: Navigate to dashboard instead of login page
+      navigate('/dashboard', { 
         state: { 
           message: isFirstUserPage
-            ? 'Admin account created successfully! You can now log in.'
-            : 'Registration successful! You can now log in.'
+            ? 'Welcome! Your admin account has been created.'
+            : 'Welcome! Your account has been created successfully.'
         } 
       });
+      
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create account');
       console.error(err);
@@ -104,20 +119,20 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
     <div className="min-h-screen flex flex-col items-center justify-center font-mono">
       <div className="w-full max-w-md px-4">
         {/* Centered title + underline, matching login */}
-        <Header 
+        {/* <Header 
           variant="login" 
           title={isFirstUserPage ? "Create Administrator Account" : "Bone Sozial - Beta"} 
-        />
+        /> */}
 
         {/* Card-style form, matching login */}
-        <h1 className="text-2xl font-bold text-center mb-4">You have been invited 🎉</h1>
+        <h1 className="text-2xl font-bold text-center mb-4">You're invited 🎉</h1>
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
           {isFirstUserPage && (
             <p className="text-[#f5ead3] mb-4">Create the first admin account to get started.</p>
           )}
-          {!isFirstUserPage && (
-            <p className="text-[#f5ead3] mb-4">Create Your Account</p>
-          )}
+          {/* {!isFirstUserPage && (
+            <p className="text-[#f4f4f4] mb-4 font-bold">Create Your Account</p>
+          )} */}
 
           {error && (
             <div className="text-red-700 bg-red-100 p-2 text-sm mb-3">
@@ -125,15 +140,15 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 font-bold">
             <input
               type="text"
-              placeholder="Username"
+              placeholder="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -144,12 +159,12 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             />
             <input
               type="email"
-              placeholder="Email"
+              placeholder="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -160,12 +175,12 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -176,12 +191,12 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             />
             <input
               type="password"
-              placeholder="Confirm Password"
+              placeholder="confirm password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -192,12 +207,12 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             />
             <input
               type="text"
-              placeholder="First Name (Optional)"
+              placeholder="first name (Optional)"
               value={firstName}
               onChange={e => setFirstName(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -207,12 +222,12 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             />
             <input
               type="text"
-              placeholder="Last Name (Optional)"
+              placeholder="last name (Optional)"
               value={lastName}
               onChange={e => setLastName(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#222]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -240,7 +255,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
 
         {/* Footer link, matching login */}
         <div className="mt-6 text-center text-[#222] text-sm space-y-1">
-          <a
+          {/* <a
             href="/"
             className="text-blue-700 underline hover:text-blue-900"
             onClick={e => {
@@ -249,7 +264,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
             }}
           >
             Return to Login
-          </a>
+          </a> */}
         </div>
       </div>
     </div>
