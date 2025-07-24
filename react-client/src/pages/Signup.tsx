@@ -205,7 +205,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               "
               required
             />
-            <input
+            {/* <input
               type="text"
               placeholder="first name (Optional)"
               value={firstName}
@@ -234,7 +234,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 font-mono
                 focus:outline-none
               "
-            />
+            /> */}
 
             <Button
               type="submit"
@@ -248,7 +248,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 text-[#f5ead3]
               "
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating Account...' : 'Enter'}
             </Button>
           </form>
         </div>
