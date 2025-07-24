@@ -636,3 +636,18 @@ def get_user(id: int, db: Session = Depends(get_db),):
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id {id} not found")
     return user
+
+
+@router.get("/check-username/{username}")
+async def check_username_availability(username: str, db: Session = Depends(get_db)):
+    """
+    Check if a username is already taken
+    Returns: {"available": true/false}
+    """
+    # Query the database to see if username exists
+    existing_user = db.query(models.User).filter(models.User.username == username).first()
+    
+    return {
+        "available": existing_user is None,
+        "username": username
+    }

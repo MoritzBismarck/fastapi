@@ -93,7 +93,7 @@ const Button: React.FC<ButtonProps> = ({
 
   // Base styling
   const baseStyle = 
-    'flex items-center justify-center font-sans ' +
+    'flex items-center justify-center font-courier ' +
     `${faceColor} ` +
     'border-2 ' +
     `${highlightColor} ` +
@@ -117,8 +117,8 @@ const Button: React.FC<ButtonProps> = ({
   // Text styling based on state
   const getTextColor = () => {
     if (disabled) return 'text-gray-600';
-    if (inactive) return 'text-gray-700 font-normal'; // Slightly muted text
-    return 'text-black font-normal'; // Normal text
+    if (inactive) return 'text-gray-700 font-bold'; // Slightly muted text
+    return 'text-black font-bold'; // Normal text
   };
   
   const variantClasses = {

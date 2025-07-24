@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { post, get } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useUsernameValidation } from '../hooks/useUsernameValidation'; // ADD THIS
 import Button from '../components/Button';
 import Header from '../components/Header';
 
@@ -26,24 +27,44 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const [tokenValid, setTokenValid] = useState(false);
   const [tokenDescription, setTokenDescription] = useState('');
 
+  // ADD THIS: Username validation hook
+  const { isChecking: isCheckingUsername, isAvailable, error: usernameError, checkUsername } = useUsernameValidation();
+
   // ————— Form validation for button states —————
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
+  // ADD THIS: Username validation function
+  const isValidUsername = (username: string): boolean => {
+    return username.trim().length >= 3 && isAvailable === true;
+  };
+
+  // UPDATE THIS: Include username validation in form completion check
   const isFormComplete = 
-    username.trim().length > 0 && 
+    username.trim().length >= 3 &&
+    isAvailable === true &&
+    !isCheckingUsername &&
     email.trim().length > 0 && 
     isValidEmail(email.trim()) &&
     password.length >= 8 && 
     confirmPassword.length > 0 &&
     password === confirmPassword;
 
+  // UPDATE THIS: Include username validation errors
   const hasValidationErrors = 
+    (username.length >= 3 && isAvailable === false) ||
     (email.length > 0 && !isValidEmail(email.trim())) ||
     (password.length > 0 && password.length < 8) ||
     (confirmPassword.length > 0 && password !== confirmPassword);
+
+  // ADD THIS: Handle username changes
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUsername = e.target.value;
+    setUsername(newUsername);
+    checkUsername(newUsername);
+  };
 
   useEffect(() => {
     const validateToken = async () => {
@@ -100,8 +121,10 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
     e.preventDefault();
 
     // Don't submit if form has validation errors
-    if (hasValidationErrors || !isFormComplete) {
-      if (password !== confirmPassword) {
+    if (hasValidationErrors || !isFormComplete || isCheckingUsername) {
+      if (isAvailable === false) {
+        setError('Username is already taken. Please choose another one.');
+      } else if (password !== confirmPassword) {
         setError('Passwords do not match');
       } else if (password.length < 8) {
         setError('Password must be at least 8 characters long');
@@ -174,11 +197,11 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
         </h1>
         
         {/* Show invitation description if available */}
-        {tokenDescription && (
+        {/* {tokenDescription && (
           <p className="text-center text-gray-600 mb-4">
             Invitation: {tokenDescription}
           </p>
-        )}
+        )} */}
         
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
           {isFirstUserPage && (
@@ -192,12 +215,13 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 font-bold">
+            {/* UPDATED USERNAME INPUT WITH VALIDATION */}
             <input
               type="text"
-              placeholder="username"
+              placeholder="username (min 3 chars)"
               value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="
+              onChange={handleUsernameChange}
+              className={`
                 w-full
                 bg-[#f4f4f4]
                 text-[#222]
@@ -205,12 +229,20 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
                 px-3 py-2
                 font-mono
                 focus:outline-none
-                border-2 border-gray-400
-                focus:border-blue-500
+                border-2
                 transition-colors
-              "
+                ${username.length >= 3 && isAvailable === false
+                  ? 'border-red-400 focus:border-red-500'
+                  : username.length >= 3 && isAvailable === true
+                    ? 'border-green-400 focus:border-green-500'
+                    : username.length > 0 && username.length < 3
+                      ? 'border-yellow-400 focus:border-yellow-500'
+                      : 'border-gray-400 focus:border-blue-500'
+                }
+              `}
               required
             />
+
             <input
               type="email"
               placeholder="email"
@@ -280,41 +312,41 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
 
             <Button
               type="submit"
-              disabled={!isFormComplete || loading}    // Disabled until form is complete OR during loading
-              inactive={false}                          // Remove inactive state - use disabled instead
-              theme="white"                             // White theme for dark background
+              disabled={!isFormComplete || loading || isCheckingUsername}
+              inactive={false}
+              theme="white"
               fullWidth
-              size="md"
+              size="lg"
             >
               {loading 
                 ? 'Creating Account...' 
-                : hasValidationErrors 
-                  ? 'Fix errors above'
-                  : isFormComplete 
-                    ? 'Create Account'
-                    : 'Complete all fields'
+                : isCheckingUsername
+                  ? 'Checking username...'
+                  : hasValidationErrors 
+                    ? 'Fix errors above'
+                    : isFormComplete 
+                      ? 'Enter'
+                      : 'Complete all fields'
               }
             </Button>
           </form>
 
-          {/* Form progress indicator */}
-          <div className="mt-3 text-xs text-gray-400 text-center">
-            {!username && 'Enter your username'}
-            {username && !email && 'Email address required'}
-            {username && email && !isValidEmail(email.trim()) && 'Valid email required (e.g. user@domain.com)'}
-            {username && email && isValidEmail(email.trim()) && !password && 'Choose a password (min 8 chars)'}
-            {username && email && isValidEmail(email.trim()) && password && password.length < 8 && 'Password too short'}
-            {username && email && isValidEmail(email.trim()) && password && password.length >= 8 && !confirmPassword && 'Confirm your password'}
-            {username && email && isValidEmail(email.trim()) && password && confirmPassword && password !== confirmPassword && 'Passwords don\'t match'}
-            {isFormComplete && !loading && 'Ready to create account!'}
+          {/* UPDATED FORM PROGRESS INDICATOR WITH USERNAME VALIDATION */}
+          <div className="mt-3 text-sm text-[#f4f4f4] text-center font-bold">
+            {!username && 'Enter your username (min 3 characters)'}
+            {username && username.length < 3 && 'Username too short (need 3+ characters)'}
+            {username && username.length >= 3 && isCheckingUsername && 'Checking if username is available...'}
+            {username && username.length >= 3 && !isCheckingUsername && isAvailable === false && 'Username taken - try another'}
+            {username && username.length >= 3 && !isCheckingUsername && isAvailable === true && !email && 'Great username! Now enter email'}
+            {username && isAvailable === true && email && !isValidEmail(email.trim()) && 'Valid email required (e.g. user@domain.com)'}
+            {username && isAvailable === true && email && isValidEmail(email.trim()) && !password && 'Choose a password (min 8 chars)'}
+            {username && isAvailable === true && email && isValidEmail(email.trim()) && password && password.length < 8 && 'Password too short'}
+            {username && isAvailable === true && email && isValidEmail(email.trim()) && password && password.length >= 8 && !confirmPassword && 'Confirm your password'}
+            {username && isAvailable === true && email && isValidEmail(email.trim()) && password && confirmPassword && password !== confirmPassword && 'Passwords don\'t match'}
+            {isFormComplete && !loading && 'Ready!'}
             {loading && 'Creating your account...'}
+            {usernameError && 'Error checking username - please try again'}
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-6 text-center text-[#f4f4f4] text-sm space-y-1">
-          <p>Welcome to BONE</p>
-          <p>Social media with purpose</p>
         </div>
       </div>
     </div>
