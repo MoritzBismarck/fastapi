@@ -26,9 +26,9 @@ class User(Base):
 
     # REMOVED CIRCULAR DEPENDENCY - no invitation_token_id column
     # invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
-    invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
-    
     is_public = Column(Boolean, nullable=False, server_default="FALSE") 
+
+    invitation_token_id = Column(Integer, ForeignKey("invitation_tokens.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     created_events = relationship('Event', back_populates='creator')
