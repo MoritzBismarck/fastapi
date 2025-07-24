@@ -78,3 +78,34 @@ def get_invitation_tokens(
     ).order_by(models.InvitationToken.created_at.desc()).all()
     
     return tokens
+
+@router.get("/validate/{token}")
+def validate_invitation_token(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Validate if an invitation token is valid without authentication"""
+    # Special case for first user
+    if token == "first-user":
+        user_count = db.query(models.User).count()
+        if user_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="First user already exists"
+            )
+        return {"valid": True, "message": "First user token is valid"}
+    
+    # Validate regular invitation token
+    invitation = InvitationService.validate_token(db, token)
+    
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid or expired invitation token"
+        )
+    
+    return {
+        "valid": True,
+        "description": invitation.description,
+        "expires_at": invitation.expires_at
+    }

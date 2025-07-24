@@ -1,8 +1,8 @@
 // react-client/src/pages/Signup.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { post } from '../api/client';
-import { useAuth } from '../hooks/useAuth'; // ✅ ADD: Import useAuth
+import { post, get } from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 import Button from '../components/Button';
 import Header from '../components/Header';
 
@@ -10,7 +10,7 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setAuthenticatedUser } = useAuth(); // ✅ ADD: Get the helper function
+  const { setAuthenticatedUser } = useAuth();
 
   const isFirstUserPage = location.pathname === '/signup/first-user';
 
@@ -22,35 +22,59 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isCheckingFirstUser, setIsCheckingFirstUser] = useState(true);
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [tokenDescription, setTokenDescription] = useState('');
 
   useEffect(() => {
-    const checkFirstUser = async () => {
+    const validateToken = async () => {
       try {
-        const response = await fetch('/api/users/count');
-        const data = await response.json();
-        if (data.count > 0 && isFirstUserPage) {
-          navigate('/', { state: { error: 'First user already exists. Please log in.' } });
+        // For first user page, check if first user already exists
+        if (isFirstUserPage) {
+          const response = await fetch('/api/users/count');
+          const data = await response.json();
+          if (data.count > 0) {
+            navigate('/', { state: { error: 'First user already exists. Please log in.' } });
+            return;
+          }
+          setTokenValid(true);
+          setIsCheckingToken(false);
+          return;
+        }
+
+        // For regular signup, validate the token
+        if (!token) {
+          navigate('/', { state: { error: 'Invalid or missing invitation token.' } });
+          return;
+        }
+
+        try {
+          const validationResponse = await get<{
+            valid: boolean;
+            description?: string;
+            message?: string;
+          }>(`/invitations/validate/${token}`);
+          
+          if (validationResponse.valid) {
+            setTokenValid(true);
+            setTokenDescription(validationResponse.description || '');
+          } else {
+            navigate('/', { state: { error: 'Invalid invitation token.' } });
+          }
+        } catch (err: any) {
+          // If the API returns 404 or 400, the token is invalid
+          const errorMessage = err.response?.data?.detail || 'Invalid or expired invitation token.';
+          navigate('/', { state: { error: errorMessage } });
         }
       } catch (err) {
-        console.error('Error checking user count:', err);
-        setError('Failed to check if this is the first user. Please try again.');
+        console.error('Error validating token:', err);
+        navigate('/', { state: { error: 'Failed to validate invitation. Please try again.' } });
       } finally {
-        setIsCheckingFirstUser(false);
+        setIsCheckingToken(false);
       }
     };
 
-    if (isFirstUserPage) {
-      checkFirstUser();
-    } else {
-      setIsCheckingFirstUser(false);
-    }
-  }, [isFirstUserPage, navigate]);
-
-  useEffect(() => {
-    if (!isFirstUserPage && !token) {
-      navigate('/', { state: { error: 'Invalid or missing invitation token.' } });
-    }
+    validateToken();
   }, [token, navigate, isFirstUserPage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,7 +94,6 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
     try {
       const effectiveToken = isFirstUserPage ? 'first-user' : token;
       
-      // ✅ MODIFIED: Expect response to include both user and token
       const response = await post<{
         user: any;
         access_token: string;
@@ -83,10 +106,10 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
         last_name: lastName
       });
       
-      // ✅ NEW: Automatically log in the user using the helper function
+      // Automatically log in the user
       setAuthenticatedUser(response.access_token, response.user);
       
-      // ✅ MODIFIED: Navigate to dashboard instead of login page
+      // Navigate to dashboard
       navigate('/dashboard', { 
         state: { 
           message: isFirstUserPage
@@ -103,36 +126,43 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
     }
   };
 
-  if (isCheckingFirstUser) {
+  // Show loading state while checking token
+  if (isCheckingToken) {
     return (
-      <div className="py-4 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Checking System Status</h1>
-        <p className="mb-6">Please wait while we check the system...</p>
-        <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center font-mono">
+        <div className="w-full max-w-md px-4">
+          <h1 className="text-2xl font-bold mb-4 text-center">Validating Invitation...</h1>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+          </div>
         </div>
       </div>
     );
   }
 
+  // If token is invalid, don't show the form (user will be redirected)
+  if (!tokenValid) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center font-mono">
       <div className="w-full max-w-md px-4">
-        {/* Centered title + underline, matching login */}
-        {/* <Header 
-          variant="login" 
-          title={isFirstUserPage ? "Create Administrator Account" : "Bone Sozial - Beta"} 
-        /> */}
-
-        {/* Card-style form, matching login */}
-        <h1 className="text-2xl font-bold text-center mb-4">You're invited 🎉</h1>
+        <h1 className="text-2xl font-bold text-center mb-4">
+          {isFirstUserPage ? "Create Administrator Account" : "You're invited 🎉"}
+        </h1>
+        
+        {/* Show invitation description if available */}
+        {/* {tokenDescription && (
+          <p className="text-center text-gray-600 mb-4">
+            Invitation: {tokenDescription}
+          </p>
+        )} */}
+        
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
           {isFirstUserPage && (
             <p className="text-[#f5ead3] mb-4">Create the first admin account to get started.</p>
           )}
-          {/* {!isFirstUserPage && (
-            <p className="text-[#f4f4f4] mb-4 font-bold">Create Your Account</p>
-          )} */}
 
           {error && (
             <div className="text-red-700 bg-red-100 p-2 text-sm mb-3">
@@ -205,36 +235,6 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               "
               required
             />
-            {/* <input
-              type="text"
-              placeholder="first name (Optional)"
-              value={firstName}
-              onChange={e => setFirstName(e.target.value)}
-              className="
-                w-full
-                bg-[#f4f4f4]
-                text-[#222]
-                placeholder-[#918880] placeholder-opacity-100
-                px-3 py-2
-                font-mono
-                focus:outline-none
-              "
-            />
-            <input
-              type="text"
-              placeholder="last name (Optional)"
-              value={lastName}
-              onChange={e => setLastName(e.target.value)}
-              className="
-                w-full
-                bg-[#f4f4f4]
-                text-[#222]
-                placeholder-[#918880] placeholder-opacity-100
-                px-3 py-2
-                font-mono
-                focus:outline-none
-              "
-            /> */}
 
             <Button
               type="submit"
@@ -251,20 +251,6 @@ const Signup: React.FC<{ isFirstUser?: boolean }> = ({ isFirstUser = false }) =>
               {loading ? 'Creating Account...' : 'Enter'}
             </Button>
           </form>
-        </div>
-
-        {/* Footer link, matching login */}
-        <div className="mt-6 text-center text-[#222] text-sm space-y-1">
-          {/* <a
-            href="/"
-            className="text-blue-700 underline hover:text-blue-900"
-            onClick={e => {
-              e.preventDefault();
-              navigate('/');
-            }}
-          >
-            Return to Login
-          </a> */}
         </div>
       </div>
     </div>

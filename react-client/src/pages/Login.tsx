@@ -1,6 +1,6 @@
 // react-client/src/pages/Login.tsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -13,8 +13,22 @@ const Login: React.FC = () => {
   // ————— form state & auth hook —————
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading: isAuthLoading, error } = useAuth();
+  const { login, isLoading: isAuthLoading, error: authError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // ————— error handling from redirects —————
+  const [displayError, setDisplayError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Check if there's an error message from redirect
+    const locationState = location.state as { error?: string } | null;
+    if (locationState?.error) {
+      setDisplayError(locationState.error);
+      // Clear the location state to prevent the error from persisting
+      navigate('/', { replace: true });
+    }
+  }, [location.state, navigate]);
 
   useEffect(() => {
     (async () => {
@@ -32,13 +46,17 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDisplayError(null); // Clear any redirect errors
     try {
       await login({ emailOrUsername: usernameOrEmail, password });
       navigate('/dashboard');
     } catch {
-      // error shown by `error`
+      // error shown by `authError`
     }
   };
+
+  // Combine errors - prefer auth error over redirect error
+  const error = authError || displayError;
 
   // ————— loading or first-user screens —————
   if (isPageLoading) {
@@ -68,12 +86,20 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center font-mono">
       <div className="w-full max-w-md px-4">
-        {/* title + underline */}
-        <Header variant="login" />
+        <h2 className="text-2xl font-bold text-center mb-4">
+          BONE
+        </h2>
 
         {/* card */}
         <div className="bg-[#222] p-6 rounded w-full max-w-sm mx-auto">
-          <p className="text-[#f5ead3] mb-4 font-bold">Use your time!</p>
+          <p className="text-[#f4f4f4] mb-4 font-bold">Use Time Wisely!</p>
+
+          {/* Show error at the top of the form */}
+          {error && (
+            <div className="text-red-700 bg-red-100 p-2 text-sm mb-4">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
@@ -83,7 +109,7 @@ const Login: React.FC = () => {
               onChange={e => setUsernameOrEmail(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#2A2A2A]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -101,7 +127,7 @@ const Login: React.FC = () => {
               onChange={e => setPassword(e.target.value)}
               className="
                 w-full
-                bg-[#E5DCCC]
+                bg-[#f4f4f4]
                 text-[#2A2A2A]
                 placeholder-[#918880] placeholder-opacity-100
                 px-3 py-2
@@ -111,12 +137,6 @@ const Login: React.FC = () => {
               "
               required
             />
-
-            {error && (
-              <div className="text-red-700 bg-red-100 p-2 text-sm">
-                {error}
-              </div>
-            )}
 
             <Button
               type="submit"
@@ -133,12 +153,6 @@ const Login: React.FC = () => {
               {isAuthLoading ? 'Processing…' : 'Login'}
             </Button>
           </form>
-        </div>
-
-        {/* footer notes */}
-        <div className="mt-6 text-center text-[#222] text-sm space-y-1">
-          <p>Beta: Account creation only with invitation</p>
-          <p>About: Social media with purpose</p>
         </div>
       </div>
     </div>
