@@ -64,30 +64,34 @@ const MatchedEvents: React.FC = () => {
     setErrorMessage('');
     
     try {
-      // Always fetch matched events
-      const matchedData = await getMatchedEvents();
+      let combinedEvents: MatchedEvent[] = [];
       
-      // Mark matched events
-      const matchedEventsWithFlag = matchedData.map(event => ({
-        ...event,
-        is_own_event: false
-      }));
-      
-      let combinedEvents = [...matchedEventsWithFlag];
-      
-      // If checkbox is checked, also fetch user's own events
       if (showOwnEvents) {
+        // When "My Events" is checked, show ONLY user's own events
         const ownData = await getUserOwnEvents();
+        combinedEvents = ownData.map(event => ({
+          ...event,
+          is_own_event: true
+        }));
+      } else {
+        // When "My Events" is unchecked, show ALL matched events (including own events)
+        const matchedData = await getMatchedEvents();
         
-        // Mark own events and filter out any that might already be in matches
-        const ownEventsWithFlag = ownData
-          .filter(event => !matchedEventsWithFlag.find(matched => matched.id === event.id))
-          .map(event => ({
-            ...event,
-            is_own_event: true
-          }));
+        // Mark which events are own events so we can handle them differently
+        const matchedEventsWithFlag = matchedData.map(event => ({
+          ...event,
+          is_own_event: false // Will be updated below for own events
+        }));
         
-        combinedEvents = [...matchedEventsWithFlag, ...ownEventsWithFlag];
+        // Also fetch own events to identify them in the matched list
+        const ownData = await getUserOwnEvents();
+        const ownEventIds = new Set(ownData.map(event => event.id));
+        
+        // Update the flag for own events that appear in matches
+        combinedEvents = matchedEventsWithFlag.map(event => ({
+          ...event,
+          is_own_event: ownEventIds.has(event.id)
+        }));
       }
       
       // For each event, fetch additional RSVP data for the UI
@@ -236,7 +240,7 @@ const MatchedEvents: React.FC = () => {
     navigate(`/events/${eventId}/chat`);
   };
   
-  const handleUnlike = async (eventId: number, event: React.MouseEvent) => {
+  const handleUnlikeEvent = async (eventId: number, event: React.MouseEvent) => {
     event.stopPropagation();
     setActionLoading(eventId);
     
@@ -253,132 +257,15 @@ const MatchedEvents: React.FC = () => {
     }
   };
   
-  // Get the current status for an event
-  const getEventStatus = (event: MatchedEvent): 'LIKED' | 'GOING' | 'OWN' => {
-    if (event.is_own_event) {
-      return 'OWN';
-    }
-    if (event.current_user_rsvp && event.current_user_rsvp.status === 'GOING') {
-      return 'GOING';
-    }
-    return 'LIKED';  // Default to LIKED (since they matched, they must have liked it)
-  };
-  
-  // Render action buttons based on current status
-  const renderActionButtons = (event: MatchedEvent) => {
-    const status = getEventStatus(event);
-    const isLoading = actionLoading === event.id;
-    
-    if (isLoading) {
-      return (
-        <div className="flex space-x-2">
-          <div className="bg-gray-400 text-white px-4 py-2 rounded">
-            Loading...
-          </div>
-        </div>
-      );
-    }
-    
-    switch (status) {
-      case 'OWN':
-        return (
-          <div className="flex space-x-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/events/${event.id}/edit`);
-              }}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Edit Event
-            </button>
-            <button
-              onClick={(e) => handleDeleteEvent(event.id, e)}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Delete Event
-            </button>
-          </div>
-        );
-        
-      case 'LIKED':
-        return (
-          <div className="flex space-x-2">
-            <button
-              onClick={(e) => handleRSVP(event.id, 'GOING', e)}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
-              Going 🎉
-            </button>
-            <button
-              onClick={(e) => handleUnlike(event.id, e)}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Unlike
-            </button>
-          </div>
-        );
-        
-      case 'GOING':
-        return (
-          <div className="flex space-x-2">
-            <button
-              onClick={(e) => handleCancelRSVP(event.id, e)}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Cancel RSVP
-            </button>
-          </div>
-        );
-        
-      default:
-        return null;
-    }
-  };
-  
-  // Get status badge
-  const getStatusBadge = (event: MatchedEvent) => {
-    const status = getEventStatus(event);
-    
-    switch (status) {
-      case 'OWN':
-        return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Your Event</span>;
-      case 'LIKED':
-        return <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Liked</span>;
-      case 'GOING':
-        return <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Going</span>;
-      default:
-        return null;
-    }
-  };
-  
-  // Get all people who liked the event
+  // Helper functions for getting people data
   const getPeopleLiked = (event: MatchedEvent): User[] => {
-    const people: User[] = [];
-    
-    if (event.creator && event.visibility === 'PRIVATE') {
-      people.push({
-        id: event.creator.id,
-        username: event.creator.username,
-        email: '', // We don't have email for creator, so use empty string
-        profile_picture: event.creator.profile_picture,
-        created_at: new Date().toISOString() // Default timestamp
-      });
-    }
-    
-    if (event.liked_by_friends) {
-      people.push(...event.liked_by_friends);
-    }
-    
-    return people;
+    return event.liked_by_friends || [];
   };
   
-  // Get all people who are going to the event
   const getPeopleGoing = (event: MatchedEvent): User[] => {
     return event.going_users || [];
   };
   
-  // Get combined attendees with status
   const getCombinedAttendees = (event: MatchedEvent): AttendeeWithStatus[] => {
     const liked = getPeopleLiked(event).map(user => ({ ...user, status: 'LIKED' as const }));
     const going = getPeopleGoing(event).map(user => ({ ...user, status: 'GOING' as const }));
@@ -406,6 +293,16 @@ const MatchedEvents: React.FC = () => {
     return combined;
   };
   
+  const getStatusBadge = (event: MatchedEvent) => {
+    if (event.current_user_rsvp?.status === 'GOING') {
+      return <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Going</span>;
+    }
+    if (event.liked_by_current_user) {
+      return <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Interested</span>;
+    }
+    return null;
+  };
+  
   if (isLoading) {
     return (
       <div className="font-mono max-w-4xl mx-auto p-4">
@@ -428,19 +325,19 @@ const MatchedEvents: React.FC = () => {
       )}
       
       {/* Controls Section */}
-        <div className="flex items-center space-x-3">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showOwnEvents}
-              onChange={(e) => handleShowOwnEventsToggle(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-black-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-bold text-gray-700">
-              My Events
-            </span>
-          </label>
-        </div>
+      <div className="flex items-center space-x-3 mb-6">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showOwnEvents}
+            onChange={(e) => handleShowOwnEventsToggle(e.target.checked)}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-black-300 rounded focus:ring-blue-500"
+          />
+          <span className="text-sm font-bold text-gray-700">
+            My Events
+          </span>
+        </label>
+      </div>
       
       {events.length === 0 ? (
         <div className="text-center p-8">
@@ -456,7 +353,6 @@ const MatchedEvents: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          
           {events.map((event) => {
             const isExpanded = expandedEventId === event.id;
             const peopleLiked = getPeopleLiked(event);
@@ -511,55 +407,123 @@ const MatchedEvents: React.FC = () => {
                                     className="w-full h-full rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="text-xs font-bold text-gray-600">
-                                    {attendee.username.charAt(0).toUpperCase()}
-                                  </span>
+                                  <span className="text-xs text-gray-600">{attendee.username.charAt(0).toUpperCase()}</span>
                                 )}
                               </div>
                             ))}
-                          </div>
-                          
-                          <span>
-                            {peopleGoing.length > 0 ? (
-                              <span className="text-green-600 font-medium">{peopleGoing.length} going</span>
-                            ) : (
-                              <span>{peopleLiked.length} interested</span>
+                            {getCombinedAttendees(event).length > 5 && (
+                              <div className="w-6 h-6 bg-gray-400 text-white rounded-full border-2 border-white flex items-center justify-center text-xs">
+                                +{getCombinedAttendees(event).length - 5}
+                              </div>
                             )}
-                          </span>
+                          </div>
+                          <span>{getCombinedAttendees(event).length} attendees</span>
                         </button>
                       </div>
                     </div>
                     
-                    {/* Expand Arrow */}
-                    <div className="flex items-center flex-shrink-0">
-                      <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                        ▼
+                    {/* Expand/Collapse Icon */}
+                    <div className="flex-shrink-0">
+                      <span className="text-gray-400 text-sm">
+                        {isExpanded ? '▼' : '▶'}
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                {/* Expanded Content */}
+                {/* Expanded Event Details */}
                 {isExpanded && (
-                  <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    <div className="mb-4">
-                      <h4 className="font-semibold mb-2">Description</h4>
-                      <p className="text-sm text-gray-700">{event.description}</p>
-                    </div>
-                    
+                  <div className="px-4 pb-4 border-t border-gray-100">
                     {/* Action Buttons */}
-                    <div className="mb-4 space-y-2">
-                      {renderActionButtons(event)}
-                      
-                      {/* Chat Button - only show for non-own events or own events with participants */}
-                      {(!event.is_own_event || (event.is_own_event && getCombinedAttendees(event).length > 0)) && (
+                    <div className="mb-4 pt-4">
+                      {/* Edit buttons - ONLY show for own events when "My Events" is checked */}
+                      {showOwnEvents && event.is_own_event && (
+                        <div className="flex space-x-2 mb-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/events/${event.id}/edit`);
+                            }}
+                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm"
+                          >
+                            Edit Event
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteEvent(event.id, e)}
+                            disabled={actionLoading === event.id}
+                            className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm disabled:opacity-50"
+                          >
+                            {actionLoading === event.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Regular RSVP buttons - only show for matched events (not own events when "My Events" is checked) */}
+                      {!showOwnEvents && (
+                        <div className="flex space-x-2 mb-3">
+                          {event.current_user_rsvp?.status === 'GOING' ? (
+                            <button
+                              onClick={(e) => handleCancelRSVP(event.id, e)}
+                              disabled={actionLoading === event.id}
+                              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 text-sm disabled:opacity-50"
+                            >
+                              {actionLoading === event.id ? 'Updating...' : 'Cancel RSVP'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => handleRSVP(event.id, 'GOING', e)}
+                              disabled={actionLoading === event.id}
+                              className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm disabled:opacity-50"
+                            >
+                              {actionLoading === event.id ? 'RSVPing...' : 'RSVP Going'}
+                            </button>
+                          )}
+                          {/* Only show unlike button for events that are NOT your own */}
+                          {!event.is_own_event && (
+                            <button
+                              onClick={(e) => handleUnlikeEvent(event.id, e)}
+                              disabled={actionLoading === event.id}
+                              className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm disabled:opacity-50"
+                            >
+                              {actionLoading === event.id ? 'Removing...' : 'Unlike'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Chat button - only for matched events */}
+                      {!showOwnEvents && (
                         <button
                           onClick={(e) => handleOpenChat(event.id, e)}
-                          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center justify-center space-x-2"
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm mb-3"
                         >
-                          <span>💬</span>
-                          <span>Chat with Event Group</span>
+                          Open Chat
                         </button>
+                      )}
+                    </div>
+                    
+                    {/* Event Description */}
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-2">Description</h4>
+                      <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {event.description || 'No description provided.'}
+                      </p>
+                    </div>
+                    
+                    {/* Additional Event Details */}
+                    <div className="text-sm text-gray-600 space-y-1">
+                      {event.end_date && (
+                        <p><strong>End:</strong> {formatDateTime(event.end_date, event.end_time)}</p>
+                      )}
+                      {event.guest_limit && (
+                        <p><strong>Guest Limit:</strong> {event.guest_limit}</p>
+                      )}
+                      {event.rsvp_close_time && (
+                        <p><strong>RSVP Closes:</strong> {new Date(event.rsvp_close_time).toLocaleString()}</p>
+                      )}
+                      <p><strong>Visibility:</strong> {event.visibility}</p>
+                      {event.creator && (
+                        <p><strong>Created by:</strong> {event.creator.username}</p>
                       )}
                     </div>
                   </div>
@@ -570,86 +534,58 @@ const MatchedEvents: React.FC = () => {
         </div>
       )}
       
-      {/* Combined Attendees Modal */}
+      {/* Attendees Modal */}
       {showAttendeesModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Event Interest</h3>
-              <button
-                onClick={closeAttendeesModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-96 overflow-y-auto">
+            <div className="p-4 border-b sticky top-0 bg-white">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Attendees</h3>
+                <button 
+                  onClick={closeAttendeesModal}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ×
+                </button>
+              </div>
             </div>
-            
-            <div className="space-y-4">
+            <div className="p-4">
               {(() => {
                 const event = events.find(e => e.id === showAttendeesModal);
-                const peopleLiked = event ? getPeopleLiked(event) : [];
-                const peopleGoing = event ? getPeopleGoing(event) : [];
+                if (!event) return <p>Event not found</p>;
+                
+                const combinedAttendees = getCombinedAttendees(event);
+                
+                if (combinedAttendees.length === 0) {
+                  return <p className="text-gray-500 text-center">No attendees yet</p>;
+                }
                 
                 return (
-                  <>
-                    {/* People Going Section */}
-                    {peopleGoing.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-green-600 mb-2">Going ({peopleGoing.length})</h4>
-                        <div className="space-y-2">
-                          {peopleGoing.map(user => (
-                            <div key={user.id} className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                                {user.profile_picture ? (
-                                  <img 
-                                    src={user.profile_picture} 
-                                    alt={user.username}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-bold text-gray-600">
-                                    {user.username.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-sm">{user.username}</span>
-                            </div>
-                          ))}
+                  <div className="space-y-3">
+                    {combinedAttendees.map((attendee) => (
+                      <div key={attendee.id} className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                          {attendee.profile_picture ? (
+                            <img 
+                              src={attendee.profile_picture} 
+                              alt={attendee.username}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-600">
+                              {attendee.username.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{attendee.username}</p>
+                          <p className="text-xs text-gray-500">
+                            {attendee.status === 'GOING' ? 'Going' : 'Interested'}
+                          </p>
                         </div>
                       </div>
-                    )}
-                    
-                    {/* People Liked Section */}
-                    {peopleLiked.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-purple-600 mb-2">Interested ({peopleLiked.length})</h4>
-                        <div className="space-y-2">
-                          {peopleLiked.map(user => (
-                            <div key={user.id} className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                                {user.profile_picture ? (
-                                  <img 
-                                    src={user.profile_picture} 
-                                    alt={user.username}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-bold text-gray-600">
-                                    {user.username.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-sm">{user.username}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {peopleLiked.length === 0 && peopleGoing.length === 0 && (
-                      <p className="text-gray-500 text-center">No one has shown interest yet</p>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 );
               })()}
             </div>

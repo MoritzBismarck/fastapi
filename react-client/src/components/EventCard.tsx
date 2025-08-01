@@ -31,7 +31,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
   const { date, time } = formatDateTime();
 
   return (
-    <div className="max-w-sm mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
       {/* Image Container - Vertical aspect ratio */}
       <div className="relative aspect-[3/5] bg-gray-200">
         <img 
@@ -54,9 +54,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         {/* Details button - More prominent */}
         <button 
           onClick={() => setShowDetails(true)}
-          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2"
+          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2 rounded-full"
         >
-          <span>Details</span>
           <span>ℹ️</span>
         </button>
         
@@ -184,7 +183,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         )}
       </div>
       
-      <div className="flex justify-center items-center py-4 space-x-8">
+      <div className="flex justify-center items-center space-x-8">
         {showActionButtons && onSkip && (
           <button 
             onClick={onSkip}
@@ -193,7 +192,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
             <img 
               src="/assets/Skipbutton.png"
               alt="Skip"
-              className="w-12 h-12 object-contain"
+              className="w-20 h-20 object-contain"
             />
           </button>
         )}
@@ -206,7 +205,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
             <img 
               src="/assets/Likebutton.png"
               alt="Like"
-              className="w-14 h-14 object-contain"
+              className="w-24 h-24 object-contain"
             />
           </button>
         )}
