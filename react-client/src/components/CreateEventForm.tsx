@@ -17,9 +17,10 @@ type FormData = {
   start_time?: string;
   end_date?: string;
   end_time?: string;
-  location: string;  // Changed from 'place' to 'location' (string)
+  location: string;
   cover?: FileList;
-  guest_limit?: number;  // Add optional guest limit
+  guest_limit?: number;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';  // Add visibility to form data
 };
 
 const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCancel }) => {
@@ -29,7 +30,11 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
     control,
     setValue,
     formState: { errors }
-  } = useForm<FormData>();
+  } = useForm<FormData>({
+    defaultValues: {
+      visibility: 'PUBLIC'  // Set default visibility
+    }
+  });
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [showEnd, setShowEnd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,11 +48,6 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
     try {
       setValue('cover', files);
       setCoverPreview(URL.createObjectURL(files[0]));
-      const options = {
-        maxSizeMB: 3,
-        maxWidthOrHeight: 1200, // Slightly larger than profile pics since event images are more prominent
-        useWebWorker: true
-      };
     } catch (error) {
       console.error('Error creating cover preview:', error);
       alert('❌ Could not create cover preview.');
@@ -73,7 +73,7 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
         console.log('Original size:', originalFile.size / 1024, 'KB');
         console.log('Compressed size:', compressedFile.size / 1024, 'KB');
         const form = new FormData();
-        form.append('file', data.cover[0]);
+        form.append('file', compressedFile);
         const resp = await apiClient.post<{ file_url: string }>(
           '/events/upload/',
           form,
@@ -95,10 +95,10 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
         start_time: data.start_time,
         end_date: showEnd ? data.end_date : undefined,
         end_time: showEnd ? data.end_time : undefined,
-        location: data.location,  // Changed from 'place' to 'location'
-        cover_photo_url: image_url,  // Assign the uploaded image URL
+        location: data.location,
+        cover_photo_url: image_url,
         guest_limit: data.guest_limit ? Number(data.guest_limit) : undefined,
-        visibility: 'PUBLIC'  // Add required visibility field
+        visibility: data.visibility  // Use the selected visibility instead of hardcoded 'PUBLIC'
       };
 
       // 3) Create event
@@ -127,23 +127,30 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
       
       {/* Cover upload */}
       <div className="relative h-36 bg-gray-100 rounded overflow-hidden mb-4">
-        {coverPreview
-          ? <img src={coverPreview} alt="Cover preview" className="object-cover w-full h-full" />
-          : <div className="flex items-center justify-center h-full text-gray-500">
-              + Add photo/image
-            </div>
-        }
-        <input
-          type="file"
-          accept="image/*"
-          onChange={onCoverChange}
-          className="absolute inset-0 opacity-0 cursor-pointer"
-        />
+        {coverPreview ? (
+          <img src={coverPreview} alt="Preview" className="w-full h-full object-cover" />
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            Click below to add cover photo
+          </div>
+        )}
       </div>
+      
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4">
+        
+        {/* Cover file input */}
+        <div>
+          <label htmlFor="cover" className="block mb-1 font-bold">Cover Photo:</label>
+          <input
+            id="cover"
+            type="file"
+            accept="image/*"
+            onChange={onCoverChange}
+            className="w-full border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Title */}
+        {/* Event Title */}
         <div>
           <label htmlFor="title" className="block mb-1 font-bold">Event Title:</label>
           <input
@@ -156,20 +163,48 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
           {errors.title && <p className="text-red-500 text-xs">Required field</p>}
         </div>
 
+        {/* Visibility Selector */}
+        <div>
+          <label htmlFor="visibility" className="block mb-1 font-bold">Who can see this event:</label>
+          <select
+            id="visibility"
+            {...register('visibility', { required: true })}
+            className="w-full border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="PUBLIC">🌍 Public (Everyone)</option>
+            <option value="FRIENDS">👥 Private (Friends)</option>
+            {/* <option value="PRIVATE">🔒 Private (Invitation Only)</option> */}
+          </select>
+          <p className="text-xs text-gray-600 mt-1">
+            Choose who can discover your event on the platform
+          </p>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label htmlFor="description" className="block mb-1 font-bold">Description:</label>
+          <textarea
+            id="description"
+            placeholder="What's this event about?"
+            {...register('description', { required: true })}
+            className="w-full border border-gray-300 rounded px-3 py-2 h-20 resize-none"
+          />
+          {errors.description && <p className="text-red-500 text-xs">Required field</p>}
+        </div>
+
         {/* Date & Time */}
         <div>
           <label className="block mb-1 font-bold">Start Date & Time:</label>
           <div className="flex space-x-2 items-center">
             <input
               type="date"
-              defaultValue={today}
+              min={today}
               {...register('start_date', { required: true })}
               className="flex-1 border border-gray-300 rounded px-3 py-2"
             />
             <Controller
               name="start_time"
               control={control}
-              defaultValue=""
               render={({ field }) => (
                 <input
                   type="text"
@@ -186,42 +221,48 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
         </div>
 
         {/* End date/time */}
-        {!showEnd
-          ? <button
-              type="button"
-              onClick={() => setShowEnd(true)}
-              className="text-blue-500 text-sm"
-            >
-              + Add end date and time
-            </button>
-          : (
-            <div>
-              <label className="block mb-1 font-bold">End Date & Time:</label>
-              <div className="flex space-x-2 items-center">
-                <input
-                  type="date"
-                  {...register('end_date')}
-                  className="flex-1 border border-gray-300 rounded px-3 py-2"
-                />
-                <Controller
-                  name="end_time"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <input
-                      type="text"
-                      placeholder="HH:MM"
-                      maxLength={5}
-                      {...field}
-                      onChange={e => field.onChange(formatTimeInput(e.target.value))}
-                      className="w-24 border border-gray-300 rounded px-3 py-2 text-center"
-                    />
-                  )}
-                />
-              </div>
+        {!showEnd ? (
+          <button
+            type="button"
+            onClick={() => setShowEnd(true)}
+            className="text-blue-600 text-sm underline self-start"
+          >
+            + Add end date/time
+          </button>
+        ) : (
+          <div>
+            <label className="block mb-1 font-bold">End Date & Time:</label>
+            <div className="flex space-x-2 items-center">
+              <input
+                type="date"
+                min={today}
+                {...register('end_date')}
+                className="flex-1 border border-gray-300 rounded px-3 py-2"
+              />
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    type="text"
+                    placeholder="HH:MM"
+                    maxLength={5}
+                    {...field}
+                    onChange={e => field.onChange(formatTimeInput(e.target.value))}
+                    className="w-24 border border-gray-300 rounded px-3 py-2 text-center"
+                  />
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setShowEnd(false)}
+                className="text-red-600 text-sm"
+              >
+                ✕
+              </button>
             </div>
-          )
-        }
+          </div>
+        )}
 
         {/* Location */}
         <div>
@@ -229,50 +270,39 @@ const CreateEventForm: React.FC<CreateEventFormProps> = ({ onEventCreated, onCan
           <input
             id="location"
             type="text"
-            placeholder="Add location"
+            placeholder="Where is the event?"
             {...register('location', { required: true })}
             className="w-full border border-gray-300 rounded px-3 py-2"
           />
           {errors.location && <p className="text-red-500 text-xs">Required field</p>}
         </div>
 
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block mb-1 font-bold">Description:</label>
-          <textarea
-            id="description"
-            placeholder="What are the details?"
-            {...register('description')}
-            rows={4}
-            className="w-full border border-gray-300 rounded px-3 py-2 resize-none"
-          />
-        </div>
-
         {/* Guest Limit */}
         <div>
-          <label htmlFor="guest_limit" className="block mb-1 font-bold">Guest Limit (Optional):</label>
+          <label htmlFor="guest_limit" className="block mb-1 font-bold">Guest Limit (optional):</label>
           <input
             id="guest_limit"
             type="number"
-            placeholder="Max number of guests"
-            {...register('guest_limit', { min: 1 })}
+            min="1"
+            placeholder="Max number of attendees"
+            {...register('guest_limit')}
             className="w-full border border-gray-300 rounded px-3 py-2"
           />
         </div>
 
         {/* Buttons */}
-        <div className="flex space-x-4">
+        <div className="flex space-x-2 pt-4">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-2 border border-gray-300 rounded hover:bg-gray-100"
+            className="flex-1 border-2 border-gray-400 bg-white text-gray-800 py-2 px-4 rounded-none font-bold hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className={`flex-1 py-2 rounded ${
+            className={`flex-1 border-2 border-blue-600 py-2 px-4 rounded-none font-bold ${
               loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >

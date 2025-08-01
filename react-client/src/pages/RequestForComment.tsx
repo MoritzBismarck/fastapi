@@ -1,4 +1,5 @@
-// Create new file: react-client/src/pages/RequestForComment.tsx
+// react-client/src/pages/RequestForComment.tsx
+// Fixed version - no more flash on navigation
 
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
@@ -38,11 +39,9 @@ const RequestForComment: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    // Refresh features and vote summary
     try {
       const rfcData = await getRFCData();
       setData(rfcData);
-      // Also refresh comments to get latest replies
       await fetchUpdatedComments();
     } catch (err) {
       console.error('Error updating data:', err);
@@ -53,66 +52,76 @@ const RequestForComment: React.FC = () => {
     fetchInitialData();
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen font-mono">
-        <Header />
-        <div className="p-4 text-center">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen font-mono">
-        <Header />
-        <div className="p-4 text-center text-red-600">
-          <p>{error}</p>
-          <button 
-            onClick={fetchInitialData}
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="min-h-screen font-mono">
-        <Header />
-        <div className="p-4 text-center">No data available</div>
-      </div>
-    );
-  }
-
+  // SINGLE RETURN - maintains consistent DOM structure, no flash
   return (
-    <div className="min-h-screen font-mono">
+    <div className="font-mono max-w-4xl mx-auto p-4">
       <Header />
       
-      <div className="p-4 max-w-4xl mx-auto space-y-8">
+      <div className="space-y-8">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center p-8">
+            <div className="text-lg">Loading...</div>
+            <div className="mt-4 space-y-3">
+              {/* Loading skeleton */}
+              <div className="h-8 bg-gray-200 rounded animate-pulse mx-auto max-w-md"></div>
+              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        )}
 
-        {/* Feature Wishlist Section */}
-        <section>
-          <FeatureWishlist
-            features={data.features}
-            userVoteSummary={data.user_vote_summary}
-            onUpdate={handleUpdate}
-          />
-        </section>
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="text-center text-red-600 p-8">
+            <p className="text-lg mb-4">{error}</p>
+            <button 
+              onClick={fetchInitialData}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
-        {/* Divider */}
-        <div className="border-t-2 border-gray-300 my-8"></div>
+        {/* Main Content - only show when data is loaded and no error */}
+        {!isLoading && !error && data && (
+          <>
+            {/* Feature Wishlist Section */}
+            <section>
+              <FeatureWishlist
+                features={data.features}
+                userVoteSummary={data.user_vote_summary}
+                onUpdate={handleUpdate}
+              />
+            </section>
 
-        {/* Comments Section */}
-        <section>
-          <CommentSystem
-            comments={comments}
-            onUpdate={handleUpdate}
-          />
-        </section>
+            {/* Divider */}
+            <div className="border-t-2 border-gray-300 my-8"></div>
+
+            {/* Comments Section */}
+            <section>
+              <CommentSystem
+                comments={comments}
+                onUpdate={handleUpdate}
+              />
+            </section>
+          </>
+        )}
+
+        {/* No Data State */}
+        {!isLoading && !error && !data && (
+          <div className="text-center p-8">
+            <p className="text-lg text-gray-600">No data available</p>
+            <button 
+              onClick={fetchInitialData}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

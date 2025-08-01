@@ -1,14 +1,14 @@
-import React from 'react'
-import { NavLink } from 'react-router-dom'
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 
 interface EventsHeaderProps {
-  isCreating?: boolean
-  onToggleCreate?: () => void
+  isCreating?: boolean;
+  onToggleCreate?: () => void;
 }
 
 const EventsHeader: React.FC<EventsHeaderProps> = ({ isCreating = false, onToggleCreate }) => {
-  const linkBase = 'font-bold text-black hover:text-black visited:text-black text-lg'
-  const activeSuffix = ' underline'
+  const linkBase = 'font-bold text-black hover:text-black visited:text-black text-lg';
+  const activeSuffix = ' underline';
 
   return (
     <div className="mb-8">
@@ -39,9 +39,22 @@ const EventsHeader: React.FC<EventsHeaderProps> = ({ isCreating = false, onToggl
           {onToggleCreate && (
             <button
               onClick={onToggleCreate}
-              className="absolute right-0 font-bold text-black hover:text-black text-lg"
+              className="absolute right-0 w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors rounded"
+              title={isCreating ? 'Cancel' : 'Add Event'}
             >
-              {isCreating ? '✕' : '+Add'}
+              {isCreating ? (
+                <img 
+                  src="/assets/MinusButton.png"
+                  alt="Cancel"
+                  className="w-6 h-6 object-contain"
+                />
+              ) : (
+                <img 
+                  src="/assets/PlusButton.png"
+                  alt="Add Event"
+                  className="w-6 h-6 object-contain"
+                />
+              )}
             </button>
           )}
         </div>
@@ -75,15 +88,28 @@ const EventsHeader: React.FC<EventsHeaderProps> = ({ isCreating = false, onToggl
           {onToggleCreate && (
             <button
               onClick={onToggleCreate}
-              className="font-bold text-black hover:text-black text-lg"
+              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors rounded"
+              title={isCreating ? 'Cancel' : 'Add Event'}
             >
-              {isCreating ? '✕' : '+Add'}
+              {isCreating ? (
+                <img 
+                  src="/assets/MinusButton.png"
+                  alt="Cancel"
+                  className="w-6 h-6 object-contain"
+                />
+              ) : (
+                <img 
+                  src="/assets/PlusButton.png"
+                  alt="Add Event"
+                  className="w-6 h-6 object-contain"
+                />
+              )}
             </button>
           )}
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default EventsHeader
+export default EventsHeader;

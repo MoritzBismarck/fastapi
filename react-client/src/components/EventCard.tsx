@@ -39,6 +39,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
           alt={event.title}
           className="w-full h-full object-cover"
         />
+
+        {/* Private Banner - Top Left */}
+        {event.visibility === 'FRIENDS' && (
+          <div className="absolute top-4 left-4 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg flex items-center gap-1">
+            <span>🔒</span>
+            <span>Private</span>
+          </div>
+        )}
         
         {/* Gradient overlay for better text visibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -46,10 +54,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         {/* Details button - More prominent */}
         <button 
           onClick={() => setShowDetails(true)}
-          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2"
+          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2"
         >
-          <span>ℹ️</span>
           <span>Details</span>
+          <span>ℹ️</span>
         </button>
         
         {/* Basic event info overlay */}
@@ -72,7 +80,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
           <div className="absolute inset-0 bg-white z-50 overflow-y-auto">
             {/* Header with close button */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">Event Details</h3>
+              <h3 className="text-xl font-bold text-gray-900">Details</h3>
               <button 
                 onClick={() => setShowDetails(false)}
                 className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
@@ -92,7 +100,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
               </div> */}
 
               {/* Title and visibility */}
-              <div>
+              {/* <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h2>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                   event.visibility === 'PRIVATE' 
@@ -101,10 +109,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
                 }`}>
                   {event.visibility === 'PRIVATE' ? '🔒 Private' : '🌍 Public'}
                 </span>
-              </div>
+              </div> */}
               
               {/* Time & Date */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              {/* <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <span>📅</span> When
                 </h4>
@@ -115,20 +123,20 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
                     Ends: {new Date(event.end_date).toLocaleDateString()}
                   </p>
                 )}
-              </div>
+              </div> */}
               
               {/* Location */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              {/* <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <span>📍</span> Where
                 </h4>
                 <p className="text-gray-700">{event.location}</p>
-              </div>
+              </div> */}
               
               {/* Description */}
               {event.description && (
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">About</h4>
+                  {/* <h4 className="font-semibold text-gray-900 mb-2">About</h4> */}
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {event.description}
                   </p>
@@ -176,17 +184,16 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         )}
       </div>
       
-      {/* Simple action buttons */}
       <div className="flex justify-center items-center py-4 space-x-8">
         {showActionButtons && onSkip && (
           <button 
             onClick={onSkip}
-            className="w-14 h-14 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors shadow-md"
+            className="hover:scale-110 transition-transform duration-200 active:scale-95"
           >
             <img 
               src="/assets/Skipbutton.png"
               alt="Skip"
-              className="w-10 h-10 object-contain"
+              className="w-12 h-12 object-contain"
             />
           </button>
         )}
@@ -194,12 +201,12 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         {showActionButtons && onLike && (
           <button 
             onClick={onLike}
-            className="w-16 h-16 bg-green-100 hover:bg-green-200 rounded-full flex items-center justify-center transition-colors shadow-md"
+            className="hover:scale-110 transition-transform duration-200 active:scale-95"
           >
             <img 
               src="/assets/Likebutton.png"
               alt="Like"
-              className="w-12 h-12 object-contain"
+              className="w-14 h-14 object-contain"
             />
           </button>
         )}
