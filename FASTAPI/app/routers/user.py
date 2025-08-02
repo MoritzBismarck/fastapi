@@ -307,7 +307,7 @@ def get_users_overview(
     }
 
 
-@router.post("/{token}", response_model=dict)
+@router.post("/{token}", response_model=schemas.UserCreationResponse)
 def create_user(token: str, user: schemas.UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
     
@@ -366,7 +366,7 @@ def create_user(token: str, user: schemas.UserCreate, db: Session = Depends(get_
     
     # Return both user data and access token
     return {
-        "user": new_user,
+        "user": new_user,        # This is a SQLAlchemy model instance
         "access_token": access_token,
         "token_type": "bearer"
     }
