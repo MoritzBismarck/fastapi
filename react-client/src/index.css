@@ -97,3 +97,82 @@ html {
 .animation-delay-400 {
   animation-delay: 400ms;
 }
+
+/* Viewport height utilities for mobile support */
+.vh-100 {
+  height: 100vh;
+  /* Fallback for older browsers */
+  height: 100dvh; /* Dynamic viewport height - better for mobile */
+}
+
+.min-vh-100 {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Ensure safe area for mobile devices */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Custom flex utilities for viewport fitting */
+.flex-viewport {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+}
+
+/* Prevent overscroll on mobile */
+.no-overscroll {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better touch targets for mobile */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive text sizing based on viewport */
+@media (max-height: 600px) {
+  .text-responsive-small {
+    font-size: 0.875rem; /* text-sm */
+  }
+  
+  .text-responsive-base {
+    font-size: 1rem; /* text-base */
+  }
+  
+  .text-responsive-lg {
+    font-size: 1.125rem; /* text-lg */
+  }
+}
+
+@media (min-height: 601px) {
+  .text-responsive-small {
+    font-size: 1rem; /* text-base */
+  }
+  
+  .text-responsive-base {
+    font-size: 1.125rem; /* text-lg */
+  }
+  
+  .text-responsive-lg {
+    font-size: 1.25rem; /* text-xl */
+  }
+}
+
+/* Ensure cards don't get too small on landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .mobile-landscape-adjust {
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+}

@@ -7,9 +7,16 @@ interface EventCardProps {
   onSkip?: () => void;
   onUnlike?: () => void;
   showActionButtons?: boolean;
+  fitToViewport?: boolean; // New prop to enable viewport fitting
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showActionButtons = true }) => {
+const EventCard: React.FC<EventCardProps> = ({ 
+  event, 
+  onLike, 
+  onSkip, 
+  showActionButtons = true, 
+  fitToViewport = false 
+}) => {
   const [showDetails, setShowDetails] = useState(false);
 
   // Format date and time for display
@@ -30,10 +37,19 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
 
   const { date, time } = formatDateTime();
 
+  // Choose container classes based on fitToViewport prop
+  const containerClasses = fitToViewport 
+    ? "w-full h-full max-h-full flex flex-col bg-white rounded-2xl shadow-lg overflow-hidden"
+    : "max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden";
+
   return (
-    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-      {/* Image Container - Vertical aspect ratio */}
-      <div className="relative aspect-[3/5] bg-gray-200">
+    <div className={containerClasses}>
+      {/* Image Container - Responsive height based on viewport fitting */}
+      <div className={`relative bg-gray-200 ${
+        fitToViewport 
+          ? "flex-1 min-h-0" // Takes available space, but leaves room for buttons
+          : "aspect-[3/5]" // Fixed aspect ratio for normal view
+      }`}>
         <img 
           src={event.cover_photo_url || '/placeholder.jpg'} 
           alt={event.title}
@@ -62,14 +78,20 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         {/* Basic event info overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <div className="text-white">
-            <h2 className="text-2xl font-bold mb-2">{event.title}</h2>
+            <h2 className={`font-bold mb-2 ${fitToViewport ? 'text-xl' : 'text-2xl'}`}>
+              {event.title}
+            </h2>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-base">📍</span>
-              <p className="text-base">{event.location}</p>
+              <p className={`${fitToViewport ? 'text-sm' : 'text-base'} truncate`}>
+                {event.location}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-base">📅</span>
-              <p className="text-base">{date} • {time}</p>
+              <p className={`${fitToViewport ? 'text-sm' : 'text-base'}`}>
+                {date} • {time}
+              </p>
             </div>
           </div>
         </div>
@@ -90,52 +112,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
             
             {/* Details content */}
             <div className="p-6 space-y-6">
-              {/* <div className="relative h-48 rounded-lg overflow-hidden">
-                <img 
-                  src={event.cover_photo_url || '/placeholder.jpg'} 
-                  alt={event.title}
-                  className="w-full h-full object-cover"
-                />
-              </div> */}
-
-              {/* Title and visibility */}
-              {/* <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h2>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  event.visibility === 'PRIVATE' 
-                    ? 'bg-purple-100 text-purple-800' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {event.visibility === 'PRIVATE' ? '🔒 Private' : '🌍 Public'}
-                </span>
-              </div> */}
-              
-              {/* Time & Date */}
-              {/* <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>📅</span> When
-                </h4>
-                <p className="text-gray-700">{date}</p>
-                <p className="text-gray-700">{time}</p>
-                {event.end_date && event.end_date !== event.start_date && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Ends: {new Date(event.end_date).toLocaleDateString()}
-                  </p>
-                )}
-              </div> */}
-              
-              {/* Location */}
-              {/* <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>📍</span> Where
-                </h4>
-                <p className="text-gray-700">{event.location}</p>
-              </div> */}
-              
               {/* Description */}
               {event.description && (
                 <div>
-                  {/* <h4 className="font-semibold text-gray-900 mb-2">About</h4> */}
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {event.description}
                   </p>
@@ -183,33 +162,38 @@ const EventCard: React.FC<EventCardProps> = ({ event, onLike, onSkip, showAction
         )}
       </div>
       
-      <div className="flex justify-center items-center space-x-8">
-        {showActionButtons && onSkip && (
-          <button 
-            onClick={onSkip}
-            className="hover:scale-110 transition-transform duration-200 active:scale-95"
-          >
-            <img 
-              src="/assets/Skipbutton.png"
-              alt="Skip"
-              className="w-20 h-20 object-contain"
-            />
-          </button>
-        )}
-        
-        {showActionButtons && onLike && (
-          <button 
-            onClick={onLike}
-            className="hover:scale-110 transition-transform duration-200 active:scale-95"
-          >
-            <img 
-              src="/assets/Likebutton.png"
-              alt="Like"
-              className="w-24 h-24 object-contain"
-            />
-          </button>
-        )}
-      </div>
+      {/* Action buttons - Fixed height at bottom */}
+      {showActionButtons && (onSkip || onLike) && (
+        <div className="flex-shrink-0 p-4">
+          <div className="flex justify-center items-center space-x-8">
+            {onSkip && (
+              <button 
+                onClick={onSkip}
+                className="hover:scale-110 transition-transform duration-200 active:scale-95"
+              >
+                <img 
+                  src="/assets/Skipbutton.png"
+                  alt="Skip"
+                  className={`object-contain ${fitToViewport ? 'w-16 h-16' : 'w-20 h-20'}`}
+                />
+              </button>
+            )}
+            
+            {onLike && (
+              <button 
+                onClick={onLike}
+                className="hover:scale-110 transition-transform duration-200 active:scale-95"
+              >
+                <img 
+                  src="/assets/Likebutton.png"
+                  alt="Like"
+                  className={`object-contain ${fitToViewport ? 'w-20 h-20' : 'w-24 h-24'}`}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

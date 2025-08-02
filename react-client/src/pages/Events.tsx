@@ -1,4 +1,4 @@
-// Create a new unified Events.tsx
+// Updated Events.tsx - Viewport-based layout for tinder view
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -31,7 +31,6 @@ const Events: React.FC<EventsProps> = ({ initialCreating = false }) => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      // Choose which API to call based on the current view
       const data = isLikedView ? 
         await getLikedEvents() : 
         await getEvents();
@@ -66,7 +65,6 @@ const Events: React.FC<EventsProps> = ({ initialCreating = false }) => {
   const handleUnlikeEvent = async (eventId: number) => {
     try {
       await unlikeEvent(eventId);
-      // Remove the event from the list in Liked view
       if (isLikedView) {
         setEvents(events.filter(event => event.id !== eventId));
       }
@@ -97,79 +95,101 @@ const Events: React.FC<EventsProps> = ({ initialCreating = false }) => {
     fetchEvents();
   };
 
-  // Fetch events when the view changes or on mount
   useEffect(() => {
     fetchEvents();
   }, [isLikedView]);
 
   return (
-    <div className="font-mono max-w-4xl mx-auto p-4">
-      <Header />
+    // Main container that takes full viewport height
+    <div className="font-mono h-screen flex flex-col overflow-hidden">
+      {/* Header - fixed height */}
+      <div className="flex-shrink-0">
+        <Header />
+      </div>
 
-      <EventsHeader
-        isCreating={isCreatingEvent}
-        onToggleCreate={toggleEventCreation}
-      />
+      {/* Events Header - fixed height */}
+      <div className="flex-shrink-0">
+        <EventsHeader
+          isCreating={isCreatingEvent}
+          onToggleCreate={toggleEventCreation}
+        />
+      </div>
 
-      {isCreatingEvent ? (
-        <CreateEventForm onEventCreated={handleEventCreated} onCancel={toggleEventCreation} />
-      ) : isLoading ? (
-        <div className="p-4 border border-gray-300 text-center">
-          Loading events...
-        </div>
-      ) : noMoreEvents || events.length === 0 ? (
-        <div className="border border-gray-300 p-4 text-center">
-          <p className="mb-4">
-            {isLikedView 
-              ? "You haven't liked any events yet." 
-              : "No more events to show right now."}
-          </p>
-          {isLikedView ? (
-            <button
-              onClick={() => navigate('/events')}
-              className="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
-            >
-              Discover Events
-            </button>
-          ) : (
-            <button
-              onClick={fetchEvents}
-              className="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
-            >
-              Refresh
-            </button>
-          )}
-        </div>
-      ) : isLikedView ? (
-        // Display for Liked Events view
-        <div className="space-y-6">
-          {events.map(event => (
-            <div key={event.id} className="relative">
-              <EventCard 
-                event={event}
-                showActionButtons={false}
-              />
-              <div className="mt-2 text-center">
-                <button
-                  onClick={() => handleUnlikeEvent(event.id)}
-                  className="text-red-600 text-sm hover:text-red-800 underline"
-                >
-                  Unlike Event
-                </button>
-              </div>
+      {/* Main content area - flexible height that fills remaining space */}
+      <div className="flex-1 flex flex-col min-h-0 px-4 pb-4">
+        {isCreatingEvent ? (
+          <div className="flex-1 overflow-y-auto">
+            <CreateEventForm onEventCreated={handleEventCreated} onCancel={toggleEventCreation} />
+          </div>
+        ) : isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="p-4 border border-gray-300 text-center">
+              Loading events...
             </div>
-          ))}
-        </div>
-      ) : (
-        // Display for All Events view (swipe cards)
-        getCurrentEvent() && (
-          <EventCard
-            event={getCurrentEvent()!}
-            onLike={handleLikeEvent}
-            onSkip={handleSkipEvent}
-          />
-        )
-      )}
+          </div>
+        ) : noMoreEvents || events.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="border border-gray-300 p-4 text-center">
+              <p className="mb-4">
+                {isLikedView 
+                  ? "You haven't liked any events yet." 
+                  : "No more events to show right now."}
+              </p>
+              {isLikedView ? (
+                <button
+                  onClick={() => navigate('/events')}
+                  className="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
+                >
+                  Discover Events
+                </button>
+              ) : (
+                <button
+                  onClick={fetchEvents}
+                  className="border border-gray-500 bg-gray-200 px-4 py-1 font-mono hover:bg-gray-300"
+                >
+                  Refresh
+                </button>
+              )}
+            </div>
+          </div>
+        ) : isLikedView ? (
+          // Liked Events view - scrollable list
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6">
+              {events.map(event => (
+                <div key={event.id} className="relative">
+                  <EventCard 
+                    event={event}
+                    showActionButtons={false}
+                  />
+                  <div className="mt-2 text-center">
+                    <button
+                      onClick={() => handleUnlikeEvent(event.id)}
+                      className="text-red-600 text-sm hover:text-red-800 underline"
+                    >
+                      Unlike Event
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          // Tinder view - single card that fits viewport
+          <div className="flex-1 flex items-center justify-center min-h-0">
+            {getCurrentEvent() && (
+              <div className="w-full max-w-md h-full flex items-center justify-center">
+                <EventCard
+                  event={getCurrentEvent()!}
+                  onLike={handleLikeEvent}
+                  onSkip={handleSkipEvent}
+                  fitToViewport={true}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
