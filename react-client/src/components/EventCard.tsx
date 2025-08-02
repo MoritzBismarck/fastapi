@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Event } from '../types';
+import Button from './Button';
 
 interface EventCardProps {
   event: Event;
@@ -18,6 +19,11 @@ const EventCard: React.FC<EventCardProps> = ({
   fitToViewport = false 
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+
+  // Helper function to check if description exists and is not empty
+  const hasDescription = (description: string | null | undefined): boolean => {
+    return !!(description && description.trim().length > 0);
+  };
 
   // Format date and time for display
   const formatDateTime = () => {
@@ -67,13 +73,21 @@ const EventCard: React.FC<EventCardProps> = ({
         {/* Gradient overlay for better text visibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         
-        {/* Details button - More prominent */}
-        <button 
-          onClick={() => setShowDetails(true)}
-          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-medium shadow-lg hover:bg-white transition-all flex items-center gap-2 rounded-full"
-        >
-          <span>ℹ️</span>
-        </button>
+        {/* Details button - Only show if there's a description */}
+        {hasDescription(event.description) && (
+          <div className="absolute top-4 right-4">
+            <Button
+              onClick={() => setShowDetails(true)}
+              size="sm"
+              variant="primary"
+              theme="white"
+              className="bg-white/90 backdrop-blur-sm shadow-lg"
+              ariaLabel="View event details"
+            >
+              <span>ℹ️</span>
+            </Button>
+          </div>
+        )}
         
         {/* Basic event info overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -102,18 +116,22 @@ const EventCard: React.FC<EventCardProps> = ({
             {/* Header with close button */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
               <h3 className="text-xl font-bold text-gray-900">Details</h3>
-              <button 
+              <Button
                 onClick={() => setShowDetails(false)}
-                className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                size="sm"
+                variant="secondary"
+                theme="white"
+                className="w-10 h-10"
+                ariaLabel="Close details"
               >
                 ✕
-              </button>
+              </Button>
             </div>
             
             {/* Details content */}
             <div className="p-6 space-y-6">
-              {/* Description */}
-              {event.description && (
+              {/* Description - Only show if it exists */}
+              {hasDescription(event.description) && (
                 <div>
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {event.description}
@@ -144,16 +162,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 {event.guest_limit && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Guest Limit</span>
-                    <span className="font-medium text-gray-900">{event.guest_limit} people</span>
-                  </div>
-                )}
-                
-                {event.rsvp_close_time && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">RSVP by</span>
-                    <span className="font-medium text-gray-900">
-                      {new Date(event.rsvp_close_time).toLocaleDateString()}
-                    </span>
+                    <span className="font-medium">{event.guest_limit}</span>
                   </div>
                 )}
               </div>
@@ -161,37 +170,32 @@ const EventCard: React.FC<EventCardProps> = ({
           </div>
         )}
       </div>
-      
-      {/* Action buttons - Fixed height at bottom */}
-      {showActionButtons && (onSkip || onLike) && (
-        <div className="flex-shrink-0 p-4">
-          <div className="flex justify-center items-center space-x-8">
-            {onSkip && (
-              <button 
-                onClick={onSkip}
-                className="hover:scale-110 transition-transform duration-200 active:scale-95"
-              >
-                <img 
-                  src="/assets/Skipbutton.png"
-                  alt="Skip"
-                  className={`object-contain ${fitToViewport ? 'w-16 h-16' : 'w-20 h-20'}`}
-                />
-              </button>
-            )}
-            
-            {onLike && (
-              <button 
-                onClick={onLike}
-                className="hover:scale-110 transition-transform duration-200 active:scale-95"
-              >
-                <img 
-                  src="/assets/Likebutton.png"
-                  alt="Like"
-                  className={`object-contain ${fitToViewport ? 'w-20 h-20' : 'w-24 h-24'}`}
-                />
-              </button>
-            )}
-          </div>
+
+      {/* Action buttons - Only show when enabled */}
+      {showActionButtons && (onLike || onSkip) && (
+        <div className={`flex gap-4 ${fitToViewport ? 'p-4' : 'p-6'}`}>
+          {onSkip && (
+            <Button
+              onClick={onSkip}
+              size="lg"
+              variant="secondary"
+              fullWidth={true}
+              className="flex-1"
+            >
+              <span className="mr-2">⏭️</span>
+            </Button>
+          )}
+          {onLike && (
+            <Button
+              onClick={onLike}
+              size="lg"
+              variant="primary"
+              fullWidth={true}
+              className="flex-1"
+            >
+              <span className="mr-2">❤️</span>
+            </Button>
+          )}
         </div>
       )}
     </div>
