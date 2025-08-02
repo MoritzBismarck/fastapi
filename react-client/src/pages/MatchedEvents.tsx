@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import EventsHeader from '../components/EventsHeader';
 import { User } from '../types';
 import { getMatchedEvents, getUserOwnEvents, rsvpToEvent, getEventRSVPs, cancelRSVP, unlikeEvent, deleteEvent } from '../api/eventsApi';
+import Button from '../components/Button';
 
 interface MatchedEvent {
   id: number;
@@ -57,6 +58,40 @@ const MatchedEvents: React.FC = () => {
   const [showOwnEvents, setShowOwnEvents] = useState(false);
   
   const navigate = useNavigate();
+  const handleEditEvent = (eventId: number) => {
+  navigate(`/events/${eventId}/edit`);
+  };
+
+  const handleDeleteEventWrapper = (eventId: number) => {
+    // Create a mock event for the existing handler
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleDeleteEvent(eventId, mockEvent);
+  };
+
+  const handleRSVPWrapper = (eventId: number, status: 'GOING') => {
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleRSVP(eventId, status, mockEvent);
+  };
+
+  const handleCancelRSVPWrapper = (eventId: number) => {
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleCancelRSVP(eventId, mockEvent);
+  };
+
+  const handleUnlikeEventWrapper = (eventId: number) => {
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleUnlikeEvent(eventId, mockEvent);
+  };
+
+  const handleOpenChatWrapper = (eventId: number) => {
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleOpenChat(eventId, mockEvent);
+  };
+
+  const showAttendeesWrapper = (eventId: number) => {
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    showAttendees(eventId, mockEvent);
+  };
   
   // Fetch both matched events and user's own events
   const fetchAllEvents = async () => {
@@ -436,69 +471,86 @@ const MatchedEvents: React.FC = () => {
                   <div className="px-4 pb-4 border-t border-gray-100">
                     {/* Action Buttons */}
                     <div className="mb-4 pt-4">
-                      {/* Edit buttons - ONLY show for own events when "My Events" is checked */}
                       {showOwnEvents && event.is_own_event && (
-                        <div className="flex space-x-2 mb-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/events/${event.id}/edit`);
-                            }}
-                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm"
+                        <div className="flex space-x-3 mb-3">
+                          <Button
+                            onClick={() => handleEditEvent(event.id)}
+                            fullWidth={false}
+                            size="md"
+                            variant="primary"
+                            className="flex-1"
                           >
                             Edit Event
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteEvent(event.id, e)}
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteEventWrapper(event.id)}
                             disabled={actionLoading === event.id}
-                            className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm disabled:opacity-50"
+                            fullWidth={false}
+                            size="md"
+                            variant="danger"
+                            inactive={actionLoading === event.id}
+                            className="flex-1"
                           >
                             {actionLoading === event.id ? 'Deleting...' : 'Delete'}
-                          </button>
+                          </Button>
                         </div>
                       )}
 
                       {/* Regular RSVP buttons - only show for matched events (not own events when "My Events" is checked) */}
                       {!showOwnEvents && (
-                        <div className="flex space-x-2 mb-3">
-                          {event.current_user_rsvp?.status === 'GOING' ? (
-                            <button
-                              onClick={(e) => handleCancelRSVP(event.id, e)}
-                              disabled={actionLoading === event.id}
-                              className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 text-sm disabled:opacity-50"
-                            >
-                              {actionLoading === event.id ? 'Updating...' : 'Cancel RSVP'}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => handleRSVP(event.id, 'GOING', e)}
-                              disabled={actionLoading === event.id}
-                              className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 text-sm disabled:opacity-50"
-                            >
-                              {actionLoading === event.id ? 'RSVPing...' : 'RSVP Going'}
-                            </button>
-                          )}
-                          {/* Only show unlike button for events that are NOT your own */}
-                          {!event.is_own_event && (
-                            <button
-                              onClick={(e) => handleUnlikeEvent(event.id, e)}
-                              disabled={actionLoading === event.id}
-                              className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm disabled:opacity-50"
-                            >
-                              {actionLoading === event.id ? 'Removing...' : 'Unlike'}
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex space-x-3 mb-3">
+                        {event.current_user_rsvp?.status === 'GOING' ? (
+                          <Button
+                            onClick={() => handleCancelRSVPWrapper(event.id)}
+                            disabled={actionLoading === event.id}
+                            fullWidth={false}
+                            size="md"
+                            variant="secondary"
+                            inactive={actionLoading === event.id}
+                            className="flex-1"
+                          >
+                            {actionLoading === event.id ? 'Updating...' : 'Cancel RSVP'}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleRSVPWrapper(event.id, 'GOING')}
+                            disabled={actionLoading === event.id}
+                            fullWidth={false}
+                            size="md"
+                            variant="primary"
+                            inactive={actionLoading === event.id}
+                            className="flex-1"
+                          >
+                            {actionLoading === event.id ? 'RSVPing...' : 'RSVP Going'}
+                          </Button>
+                        )}
+                        {!event.is_own_event && (
+                          <Button
+                            onClick={() => handleUnlikeEventWrapper(event.id)}
+                            disabled={actionLoading === event.id}
+                            fullWidth={false}
+                            size="md"
+                            variant="danger"
+                            inactive={actionLoading === event.id}
+                            className="flex-1"
+                          >
+                            {actionLoading === event.id ? 'Removing...' : 'Unlike'}
+                          </Button>
+                        )}
+                      </div>
+                    )}
 
                       {/* Chat button - only for matched events */}
                       {!showOwnEvents && (
-                        <button
-                          onClick={(e) => handleOpenChat(event.id, e)}
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm mb-3"
+                        <Button
+                          onClick={() => handleOpenChatWrapper(event.id)}
+                          fullWidth={true}
+                          size="md"
+                          variant="primary"
+                          className="mb-3"
                         >
                           Open Chat
-                        </button>
+                        </Button>
                       )}
                     </div>
                     
